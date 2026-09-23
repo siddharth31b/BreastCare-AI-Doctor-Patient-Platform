@@ -1,0 +1,106 @@
+[
+  {
+    "category": "Symptoms on Left Breast",
+    "phase": 1,
+    "options": [
+      { "label": "Symptoms on Left Breast – Palpable Lump / Abnormality", "converted_name": "Symptoms on Left Breast – Palpable Lump / Abnormality", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Nipple Retraction / Inversion", "converted_name": "Symptoms on Left Breast – Nipple Retraction / Inversion", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Nipple Discharge", "converted_name": "Symptoms on Left Breast – Nipple Discharge", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Skin Dimpling", "converted_name": "Symptoms on Left Breast – Skin Dimpling", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Skin Thickening", "converted_name": "Symptoms on Left Breast – Skin Thickening", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Itching of the Nipple Area", "converted_name": "Symptoms on Left Breast – Itching of the Nipple Area", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Redness", "converted_name": "Symptoms on Left Breast – Redness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Left Breast – Ulcer / Open Sore", "converted_name": "Symptoms on Left Breast – Ulcer / Open Sore", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Breast – Pain", "converted_name": "Symptoms on Left Breast – Pain", "weight": 1, "relevance": "L" }
+    ]
+  },
+  {
+    "category": "Symptoms on Right Breast",
+    "phase": 1,
+    "options": [
+      { "label": "Symptoms on Right Breast – Palpable Lump / Abnormality", "converted_name": "Symptoms on Right Breast – Palpable Lump / Abnormality", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Nipple Retraction / Inversion", "converted_name": "Symptoms on Right Breast – Nipple Retraction / Inversion", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Nipple Discharge", "converted_name": "Symptoms on Right Breast – Nipple Discharge", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Skin Dimpling", "converted_name": "Symptoms on Right Breast – Skin Dimpling", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Skin Thickening", "converted_name": "Symptoms on Right Breast – Skin Thickening", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Itching of the Nipple Area", "converted_name": "Symptoms on Right Breast – Itching of the Nipple Area", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Redness", "converted_name": "Symptoms on Right Breast – Redness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Right Breast – Ulcer / Open Sore", "converted_name": "Symptoms on Right Breast – Ulcer / Open Sore", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Breast – Pain", "converted_name": "Symptoms on Right Breast – Pain", "weight": 1, "relevance": "L" }
+    ]
+  },
+  {
+    "category": "Symptoms on Neck",
+    "phase": 2,
+    "options": [
+      { "label": "Symptoms on Neck – Lump", "converted_name": "Symptoms on Neck – Lump", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Neck – Swelling", "converted_name": "Symptoms on Neck – Swelling", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Neck – Bleeding", "converted_name": "Symptoms on Neck – Bleeding", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Neck – Redness", "converted_name": "Symptoms on Neck – Redness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Neck – Discoloration", "converted_name": "Symptoms on Neck – Discoloration", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Neck – Wound", "converted_name": "Symptoms on Neck – Wound", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Neck – Ulcer / Skin Changes", "converted_name": "Symptoms on Neck – Ulcer / Skin Changes", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Neck – Pain", "converted_name": "Symptoms on Neck – Pain", "weight": 1, "relevance": "L" }
+    ]
+  },
+  {
+    "category": "Symptoms on Left Arm",
+    "phase": 2,
+    "options": [
+      { "label": "Symptoms on Left Arm – Axillary (Armpit) Lump", "converted_name": "Symptoms on Left Arm – Axillary (Armpit) Lump", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Left Arm – Swelling", "converted_name": "Symptoms on Left Arm – Swelling", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Left Arm – Restricted Movement", "converted_name": "Symptoms on Left Arm – Restricted Movement", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Left Arm – Weakness", "converted_name": "Symptoms on Left Arm – Weakness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Left Arm – Numbness", "converted_name": "Symptoms on Left Arm – Numbness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Left Arm – Bruising", "converted_name": "Symptoms on Left Arm – Bruising", "weight": 1, "relevance": "L" },
+      { "label": "Symptoms on Left Arm – Pain", "converted_name": "Symptoms on Left Arm – Pain", "weight": 1, "relevance": "L" }
+    ]
+  },
+  {
+    "category": "Symptoms on Right Arm",
+    "phase": 2,
+    "options": [
+      { "label": "Symptoms on Right Arm – Axillary (Armpit) Lump", "converted_name": "Symptoms on Right Arm – Axillary (Armpit) Lump", "weight": 3, "relevance": "H" },
+      { "label": "Symptoms on Right Arm – Swelling", "converted_name": "Symptoms on Right Arm – Swelling", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Right Arm – Restricted Movement", "converted_name": "Symptoms on Right Arm – Restricted Movement", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Right Arm – Weakness", "converted_name": "Symptoms on Right Arm – Weakness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Right Arm – Numbness", "converted_name": "Symptoms on Right Arm – Numbness", "weight": 2, "relevance": "M" },
+      { "label": "Symptoms on Right Arm – Bruising", "converted_name": "Symptoms on Right Arm – Bruising", "weight": 1, "relevance": "L" },
+      { "label": "Symptoms on Right Arm – Pain", "converted_name": "Symptoms on Right Arm – Pain", "weight": 1, "relevance": "L" }
+    ]
+  },
+  {
+    "category": "Respiratory Symptoms",
+    "phase": 3,
+    "options": [
+      { "label": "Respiratory Symptoms – Cough", "converted_name": "Respiratory Symptoms – Cough", "weight": 2, "relevance": "M" },
+      { "label": "Respiratory Symptoms – Breathlessness", "converted_name": "Respiratory Symptoms – Breathlessness", "weight": 3, "relevance": "H" },
+      { "label": "Respiratory Symptoms – Chest Pain", "converted_name": "Respiratory Symptoms – Chest Pain", "weight": 3, "relevance": "H" },
+      { "label": "Respiratory Symptoms – Wheezing", "converted_name": "Respiratory Symptoms – Wheezing", "weight": 2, "relevance": "M" }
+    ]
+  },
+  {
+    "category": "CNS Symptoms",
+    "phase": 3,
+    "options": [
+      { "label": "CNS Symptoms – Headache", "converted_name": "CNS Symptoms – Headache", "weight": 2, "relevance": "M" },
+      { "label": "CNS Symptoms – Blurred Vision", "converted_name": "CNS Symptoms – Blurred Vision", "weight": 3, "relevance": "H" },
+      { "label": "CNS Symptoms – Giddiness", "converted_name": "CNS Symptoms – Giddiness", "weight": 2, "relevance": "M" },
+      { "label": "CNS Symptoms – Nausea", "converted_name": "CNS Symptoms – Nausea", "weight": 2, "relevance": "M" },
+      { "label": "CNS Symptoms – Vomiting", "converted_name": "CNS Symptoms – Vomiting", "weight": 2, "relevance": "M" },
+      { "label": "CNS Symptoms – Convulsions", "converted_name": "CNS Symptoms – Convulsions", "weight": 3, "relevance": "H" }
+    ]
+  },
+  {
+    "category": "Under Muscular Skeleton",
+    "phase": 3,
+    "options": [
+      { "label": "Under Muscular Skeleton – Back Pain", "converted_name": "Under Muscular Skeleton – Back Pain", "weight": 2, "relevance": "M" },
+      { "label": "Under Muscular Skeleton – Joint Pain", "converted_name": "Under Muscular Skeleton – Joint Pain", "weight": 2, "relevance": "M" },
+      { "label": "Under Muscular Skeleton – Shoulder Pain", "converted_name": "Under Muscular Skeleton – Shoulder Pain", "weight": 2, "relevance": "M" },
+      { "label": "Under Muscular Skeleton – Underarm Pain", "converted_name": "Under Muscular Skeleton – Underarm Pain", "weight": 2, "relevance": "M" },
+      { "label": "Under Muscular Skeleton – Muscle Weakness", "converted_name": "Under Muscular Skeleton – Muscle Weakness", "weight": 2, "relevance": "M" },
+      { "label": "Under Muscular Skeleton – Difficulty Moving", "converted_name": "Under Muscular Skeleton – Difficulty Moving", "weight": 2, "relevance": "M" }
+    ]
+  }
+]

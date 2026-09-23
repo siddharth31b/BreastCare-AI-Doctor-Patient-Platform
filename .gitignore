@@ -1,0 +1,92 @@
+# ==============================================================================
+# BreastCare AI Platform - Root .gitignore
+# Covers Backend, Doctor App (Expo/React Native), and Admin Dashboard (Next.js)
+# ==============================================================================
+
+# 1. Dependencies & Package Managers
+node_modules/
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# 2. Environment Variables & Secret Credentials (CRITICAL)
+.env
+.env.*
+.env*.local
+*.env
+# Keep all example templates committed
+!.env.example
+!**/.env.example
+
+# Service Account Keys, Firebase Credentials, Private Keys
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+serviceAccountKey*.json
+firebase-service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Cryptographic Keys & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.p8
+*.jks
+*.keystore
+*.mobileprovision
+
+# 3. Next.js (Admin Dashboard)
+.next/
+out/
+build/
+.vercel/
+.turbo/
+
+# 4. Expo & React Native (Doctor App)
+.expo/
+.expo-shared/
+dist/
+web-build/
+.metro-health-check*
+.kotlin/
+*.orig.*
+
+# Generated native build directories
+doctor-app/android/
+doctor-app/ios/
+
+# 5. TypeScript & Cache
+*.tsbuildinfo
+next-env.d.ts
+expo-env.d.ts
+.cache/
+.temp/
+tmp/
+
+# 6. Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# 7. Testing & Coverage
+coverage/
+.nyc_output/
+
+# 8. OS & IDE Artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+.claude/

@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "Age": 66,
+    "sym_neck_l_lump": "No",
+    "sym_neck_r_lump": "No",
+    "sym_arm_l_lump": "No",
+    "sym_arm_r_lump": "No",
+    "sym_breast_l_pain": "No",
+    "sym_breast_l_palpable": "No",
+    "sym_breast_l_changes_shape": "No",
+    "sym_breast_l_wound": "No",
+    "sym_breast_l_nipple_discharge": "No",
+    "sym_breast_r_pain": "No",
+    "sym_breast_r_palpable": "No",
+    "sym_breast_r_changes_shape": "No",
+    "sym_breast_r_wound": "No",
+    "sym_breast_r_nipple_discharge": "No"
+  },
+  {
+    "id": 2,
+    "Age": 57,
+    "sym_neck_l_lump": "No",
+    "sym_neck_r_lump": "No",
+    "sym_arm_l_lump": "No",
+    "sym_arm_r_lump": "No",
+    "sym_breast_l_pain": "Yes",
+    "sym_breast_l_palpable": "yes",
+    "sym_breast_l_changes_shape": "No",
+    "sym_breast_l_wound": "No",
+    "sym_breast_l_nipple_discharge": "No",
+    "sym_breast_r_pain": "No",
+    "sym_breast_r_palpable": "No",
+    "sym_breast_r_changes_shape": "No",
+    "sym_breast_r_wound": "No",
+    "sym_breast_r_nipple_discharge": "No"
+  }
+]
