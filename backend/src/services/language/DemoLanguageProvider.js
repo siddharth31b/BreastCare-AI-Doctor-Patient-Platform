@@ -81,11 +81,7 @@ class DemoLanguageProvider extends LanguageProviderInterface {
   async getSupportedLanguages() {
     return [
       { code: 'en', name: 'English', nativeName: 'English' },
-      { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
-      { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
-      { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
-      { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
-      { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' }
+      { code: 'hi', name: 'Hindi', nativeName: 'हिंदी' }
     ];
   }
 
@@ -138,15 +134,29 @@ class DemoLanguageProvider extends LanguageProviderInterface {
   }
 
   async textToSpeech({ text, language = 'hi', gender = 'female' }) {
-    return {
-      audioUrl: null,
-      audioBase64: 'UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', // Minimal silent WAV header
-      format: 'wav',
-      language,
-      provider: 'demo',
-      isDemo: true,
-      text
-    };
+    try {
+      const orpheusTTS = require('../orpheusTTS');
+      const result = await orpheusTTS.synthesizeSpeech({ text, language });
+      return {
+        audioUrl: null,
+        audioBase64: result.audioBase64,
+        format: result.format || 'mp3',
+        language,
+        provider: 'demo',
+        isDemo: true,
+        text
+      };
+    } catch (err) {
+      return {
+        audioUrl: null,
+        audioBase64: 'UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
+        format: 'wav',
+        language,
+        provider: 'demo',
+        isDemo: true,
+        text
+      };
+    }
   }
 }
 

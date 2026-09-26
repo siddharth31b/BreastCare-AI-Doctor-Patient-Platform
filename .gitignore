@@ -90,3 +90,12 @@ desktop.ini
 *.swp
 *.swo
 .claude/
+
+# 9. Temporary Test Artifacts & Screen Dumps
+tts-test*.json
+backend/tts-test*.json
+*.xml
+doctor-app/tablet_*.png
+doctor-app/view*.xml
+doctor-app/window_dump.xml
+
