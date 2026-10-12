@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Sidebar } from '../../components/Sidebar';
 import { Header } from '../../components/Header';
-import { adminApi, Analytics, Assessment } from '../../lib/api';
+import { adminApi, Analytics, Assessment, getApiUrl } from '../../lib/api';
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -39,6 +39,31 @@ export default function DashboardPage() {
       }
     }
     loadData();
+
+    // Subscribe to cross-device realtime stream
+    let es: EventSource | null = null;
+    const token = adminApi.getAuthToken();
+    if (typeof window !== 'undefined' && window.EventSource && token) {
+      try {
+        es = new EventSource(`${getApiUrl()}/realtime/stream?token=${encodeURIComponent(token)}`);
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && data.type && data.type !== 'CONNECTED') {
+              loadData();
+            }
+          } catch (_) {}
+        };
+      } catch (err) {
+        console.warn('Realtime SSE error:', err);
+      }
+    }
+
+    return () => {
+      if (es) {
+        es.close();
+      }
+    };
   }, []);
 
   const getTierBadge = (tier?: string) => {

@@ -7,21 +7,18 @@ const repo = require('../db/repository');
  */
 async function authenticate(req, res, next) {
   try {
+    let idToken = null;
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: {
-          message: 'Unauthorized: Missing or invalid Authorization header. Expected Bearer token.',
-          status: 401
-        }
-      });
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      idToken = authHeader.split('Bearer ')[1].trim();
+    } else if (req.query && req.query.token) {
+      idToken = String(req.query.token).trim();
     }
 
-    const idToken = authHeader.split('Bearer ')[1].trim();
     if (!idToken) {
       return res.status(401).json({
         error: {
-          message: 'Unauthorized: Token string is empty.',
+          message: 'Unauthorized: Missing or invalid authentication token. Expected Bearer header or token query parameter.',
           status: 401
         }
       });

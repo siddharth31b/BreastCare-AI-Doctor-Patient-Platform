@@ -27,7 +27,7 @@ export const RootNavigator: React.FC = () => {
         screenOptions={{
           headerShown: false,
           animation: 'fade',
-          contentStyle: { backgroundColor: '#0f172a' },
+          contentStyle: { backgroundColor: '#f8fafc' },
         }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />

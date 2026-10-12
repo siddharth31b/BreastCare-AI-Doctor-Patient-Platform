@@ -24,14 +24,14 @@ test('Repository - Questions retrieval from seed', async () => {
 test('Repository - Patient creation, relationship, and assessment flow', async () => {
   const doctor = (await repo.getAllDoctors())[0];
   const newPatient = await repo.createPatient({
-    name: 'Meena Kumari',
+    name: 'Test Patient Gamma',
     age: 42,
     gender: 'Female',
     phone: '+91 99887 76655'
   }, doctor.id);
 
   assert.ok(newPatient.id);
-  assert.equal(newPatient.name, 'Meena Kumari');
+  assert.equal(newPatient.name, 'Test Patient Gamma');
 
   // Verify doctor-patient isolation
   const doctorPatients = await repo.getPatientsForDoctor(doctor.id);
@@ -68,4 +68,7 @@ test('Repository - Patient creation, relationship, and assessment flow', async (
     risk_analysis: { tier: 'Low', totalScore: 2 }
   });
   assert.equal(updated.status, 'COMPLETED');
+
+  // Teardown test patient and cascaded data
+  await repo.deletePatient(newPatient.id);
 });

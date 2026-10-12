@@ -1,6 +1,6 @@
-# BreastCare AI — Clinical & Administrative Account Setup Guide
+# NariSetu – BreastCare AI — Clinical & Administrative Account Setup Guide
 
-This document specifies the required accounts for clinical doctor tablet operations and administrative oversight across the **BreastCare AI** platform.
+This document specifies the required accounts for clinical doctor tablet operations and administrative oversight across the **NariSetu** platform.
 
 ---
 

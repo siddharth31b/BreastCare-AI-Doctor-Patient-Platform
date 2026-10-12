@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { FIREBASE_CONFIG } from '../config/constants';
 
-const TOKEN_STORAGE_KEY = 'breastcare_doctor_token';
+export const TOKEN_STORAGE_KEY = 'breastcare_doctor_token';
 
 // Safely initialize Firebase Client App with React Native persistence
 const app = getApps().length === 0 ? initializeApp(FIREBASE_CONFIG) : getApp();
@@ -43,6 +43,39 @@ let currentCachedToken: string | null = null;
 let authStateListenerInitialized = false;
 
 /**
+ * Waits for Firebase Auth persistence to finish initializing
+ * and returns the current authenticated User (or null if unauthenticated).
+ */
+export async function waitForAuthState(): Promise<User | null> {
+  try {
+    if (typeof (auth as any).authStateReady === 'function') {
+      await (auth as any).authStateReady();
+      return auth.currentUser;
+    }
+  } catch (err) {
+    console.warn('[FirebaseAuth] authStateReady error:', err);
+  }
+  return new Promise((resolve) => {
+    let resolved = false;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!resolved) {
+        resolved = true;
+        unsubscribe();
+        resolve(user);
+      }
+    });
+    // Safety timeout in case listener takes longer than expected
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        try { unsubscribe(); } catch (e) {}
+        resolve(auth.currentUser);
+      }
+    }, 2000);
+  });
+}
+
+/**
  * Ensures auth state listener is active to cache fresh tokens
  */
 export function initAuthListener(onTokenChange?: (token: string | null) => void) {
@@ -61,6 +94,7 @@ export function initAuthListener(onTokenChange?: (token: string | null) => void)
       }
     } else {
       currentCachedToken = null;
+      await AsyncStorage.removeItem(TOKEN_STORAGE_KEY).catch(() => {});
       onTokenChange?.(null);
     }
   });
@@ -82,22 +116,13 @@ export async function getFreshIdToken(forceRefresh = false): Promise<string | nu
     } catch (err) {
       console.warn('[FirebaseAuth] Failed refreshing token from Firebase Auth:', err);
     }
-  }
-
-  if (currentCachedToken) {
-    return currentCachedToken;
-  }
-
-  try {
-    const stored = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-    if (stored) {
-      currentCachedToken = stored;
-      return stored;
+    if (currentCachedToken) {
+      return currentCachedToken;
     }
-  } catch (err) {
-    console.warn('[FirebaseAuth] Failed reading token from storage:', err);
   }
 
+  // If there is no active Firebase currentUser, session is unauthenticated
+  currentCachedToken = null;
   return null;
 }
 

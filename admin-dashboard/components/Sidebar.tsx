@@ -29,7 +29,7 @@ export function Sidebar() {
           <Activity className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <h1 className="font-bold text-slate-900 text-sm tracking-tight leading-tight">BreastCare AI</h1>
+          <h1 className="font-bold text-slate-900 text-sm tracking-tight leading-tight">NariSetu Admin</h1>
           <p className="text-[11px] text-slate-500 font-medium truncate">Clinical Management System</p>
         </div>
       </div>

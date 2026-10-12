@@ -1,144 +1,76 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, TABLET_ID } from '../config/constants';
+import * as Api from '../api';
 import { Patient, Assessment, DoctorUser } from '../types';
 
-let inMemoryToken: string | null = null;
-let customBaseUrl: string | null = null;
-
+/**
+ * Backward compatibility wrapper delegating to the centralized API architecture in src/api
+ */
 export const ApiService = {
-  async getBaseUrl(): Promise<string> {
-    if (customBaseUrl) return customBaseUrl;
-    const stored = await AsyncStorage.getItem('breastcare_custom_api_url');
-    if (stored) {
-      customBaseUrl = stored;
-      return stored;
-    }
-    return API_URL;
-  },
-
-  async setBaseUrl(url: string | null): Promise<void> {
-    customBaseUrl = url && url.trim() ? url.trim() : null;
-    if (customBaseUrl) {
-      await AsyncStorage.setItem('breastcare_custom_api_url', customBaseUrl);
-    } else {
-      await AsyncStorage.removeItem('breastcare_custom_api_url');
-    }
-  },
-
-  async checkHealth(targetUrl?: string): Promise<{ success: boolean; version?: string; status?: string }> {
-    try {
-      const base = targetUrl ? targetUrl.trim() : await this.getBaseUrl();
-      const res = await fetch(`${base}/health`, { method: 'GET' });
-      const data = await res.json();
-      return { success: res.ok, version: data.version, status: data.status };
-    } catch (err: any) {
-      return { success: false, status: err.message };
-    }
-  },
+  getBaseUrl: Api.getBaseUrl,
+  setBaseUrl: Api.setBaseUrl,
+  checkHealth: Api.checkHealth,
 
   async setToken(token: string | null) {
-    inMemoryToken = token;
     if (token) {
-      await AsyncStorage.setItem('breastcare_doctor_token', token);
+      await Api.setSessionToken(token);
     } else {
-      await AsyncStorage.removeItem('breastcare_doctor_token');
+      await Api.setSessionToken(null);
     }
   },
 
   async getToken(): Promise<string | null> {
-    if (inMemoryToken) return inMemoryToken;
-    const stored = await AsyncStorage.getItem('breastcare_doctor_token');
-    inMemoryToken = stored;
-    return stored;
+    return await Api.getFreshIdToken();
   },
 
   async getHeaders(): Promise<HeadersInit> {
-    const token = await this.getToken();
+    const token = await Api.getFreshIdToken();
     return {
       'Content-Type': 'application/json',
-      'x-tablet-id': TABLET_ID,
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      'x-tablet-id': 'TABLET-CLINIC-01',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   },
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const headers = await this.getHeaders();
-    const baseUrl = await this.getBaseUrl();
-    const url = `${baseUrl}${endpoint}`;
-
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...(options.headers || {})
-      }
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error?.message || `Request failed with status ${res.status}`);
-    }
-    return data;
+    return await Api.apiClient<T>(endpoint, options);
   },
 
   // Auth & Session
   async establishSession(token: string): Promise<{ user: DoctorUser; role: string }> {
-    await this.setToken(token);
-    const res = await this.request<{ success: boolean; user: DoctorUser; role: string }>('/auth/session', {
-      method: 'POST'
-    });
-    return res;
+    return await Api.establishSession(token);
   },
 
   async getDoctorProfile(): Promise<DoctorUser> {
-    const res = await this.request<{ success: boolean; doctor: DoctorUser }>('/doctors/me');
-    return res.doctor;
+    return await Api.getDoctorProfile();
   },
 
   // Patients
   async getDoctorPatients(): Promise<Patient[]> {
-    const res = await this.request<{ success: boolean; patients: Patient[] }>('/doctors/me/patients');
-    return res.patients;
+    return await Api.getDoctorPatients();
   },
 
   async getPatientById(id: string): Promise<Patient> {
-    const res = await this.request<{ success: boolean; patient: Patient }>(`/patients/${id}`);
-    return res.patient;
+    return await Api.getPatientById(id);
   },
 
   async createPatient(patientData: Partial<Patient>): Promise<Patient> {
-    const res = await this.request<{ success: boolean; patient: Patient }>('/patients', {
-      method: 'POST',
-      body: JSON.stringify(patientData)
-    });
-    return res.patient;
+    return await Api.createPatient(patientData as any);
   },
 
   async uploadPatientPhoto(patientId: string, base64Image: string): Promise<{ face_photo_url: string; patient: Patient }> {
-    const res = await this.request<{ success: boolean; face_photo_url: string; patient: Patient }>(`/patients/${patientId}/photo`, {
-      method: 'POST',
-      body: JSON.stringify({ photo_base64: base64Image })
-    });
-    return res;
+    return await Api.uploadPatientPhoto(patientId, base64Image);
   },
 
   // Assessments
   async getDoctorAssessments(): Promise<Assessment[]> {
-    const res = await this.request<{ success: boolean; assessments: Assessment[] }>('/doctors/me/assessments');
-    return res.assessments;
+    return await Api.getDoctorAssessments();
   },
 
   async getAssessmentById(id: string): Promise<Assessment> {
-    const res = await this.request<{ success: boolean; assessment: Assessment }>(`/assessments/${id}`);
-    return res.assessment;
+    return await Api.getAssessmentById(id);
   },
 
   async startAssessment(patientId: string, riskProfile: any = {}): Promise<Assessment> {
-    const res = await this.request<{ success: boolean; assessment: Assessment }>('/assessments', {
-      method: 'POST',
-      body: JSON.stringify({ patient_id: patientId, risk_profile: riskProfile })
-    });
-    return res.assessment;
+    return await Api.startAssessment(patientId, riskProfile);
   },
 
   async submitAssessment(
@@ -147,64 +79,39 @@ export const ApiService = {
     answersMap: Record<string, 'Yes' | 'No'>,
     answersList: any[] = []
   ): Promise<{ assessment: Assessment; clinical_result: any }> {
-    const res = await this.request<{ success: boolean; assessment: Assessment; clinical_result: any }>(
-      `/assessments/${assessmentId}/submit`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          risk_profile: riskProfile,
-          answers_map: answersMap,
-          answers_list: answersList
-        })
-      }
-    );
-    return res;
+    return await Api.submitAssessment(assessmentId, riskProfile, answersMap, answersList);
   },
 
   async validateAssessment(id: string, doctorNote?: string): Promise<{ success: boolean; assessment: Assessment }> {
-    return await this.request<{ success: boolean; assessment: Assessment }>(`/assessments/${id}/validate`, {
-      method: 'POST',
-      body: JSON.stringify({ doctor_note: doctorNote, confirmed: true })
-    });
+    return await Api.validateAssessment(id, doctorNote);
   },
 
   async requestReassessment(id: string, reason: string, doctorNote?: string): Promise<{ success: boolean; assessment: Assessment }> {
-    return await this.request<{ success: boolean; assessment: Assessment }>(`/assessments/${id}/reassessment`, {
-      method: 'POST',
-      body: JSON.stringify({ reason, doctor_note: doctorNote })
-    });
+    return await Api.requestReassessment(id, reason, doctorNote);
   },
 
   async saveReviewNote(id: string, note: string): Promise<{ success: boolean; assessment: Assessment }> {
-    return await this.request<{ success: boolean; assessment: Assessment }>(`/assessments/${id}/review-note`, {
-      method: 'POST',
-      body: JSON.stringify({ note })
-    });
+    return await Api.saveReviewNote(id, note);
   },
 
-  // BHASHINI / Language
+  // Language
   async getSupportedLanguages() {
-    return await this.request<{ success: boolean; provider: string; languages: any[] }>('/language/languages');
+    return await Api.getSupportedLanguages();
   },
 
   async translateText(text: string, targetLang: string) {
-    return await this.request<{ success: boolean; translatedText: string }>('/language/translate', {
-      method: 'POST',
-      body: JSON.stringify({ text, targetLang })
-    });
+    return await Api.translateText(text, targetLang);
   },
 
   async requestSTT(audioBase64: string, language: string = 'hi', promptHint: string = '') {
-    return await this.request<{ success: boolean; transcript: string; isDemo: boolean }>('/language/stt', {
-      method: 'POST',
-      body: JSON.stringify({ audioBase64, language, promptHint })
-    });
+    return await Api.requestSTT(audioBase64, language, promptHint);
   },
 
   async requestTTS(text: string, language: string = 'hi') {
-    return await this.request<{ success: boolean; audioBase64: string; isDemo: boolean }>('/language/tts', {
-      method: 'POST',
-      body: JSON.stringify({ text, language })
-    });
-  }
+    return await Api.requestTTS(text, language);
+  },
+
+  async synthesizeTTS(text: string, language: string = 'en') {
+    return await Api.synthesizeTTS(text, language);
+  },
 };

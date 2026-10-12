@@ -1,14 +1,14 @@
 {
   "name": "breastcare-backend",
   "version": "1.0.0",
-  "description": "BreastCare AI Healthcare Assessment Platform Backend",
+  "description": "NariSetu Backend — Clinical Healthcare Assessment Platform",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/db/seedQuestions.js",
     "verify:firebase": "node src/scripts/verifyFirebase.js",
-    "test": "node --test src/tests/**/*.test.js"
+    "test": "node --test --test-concurrency=1 src/tests/**/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0",

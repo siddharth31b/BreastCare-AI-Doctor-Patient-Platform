@@ -1,8 +1,16 @@
 import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
-import { ClinicalTheme } from '../theme/clinicalTheme';
+import {
+  ClinicalTheme,
+  TOUCH_TARGETS,
+  SPACING,
+  RADIUS,
+  ELEVATION,
+  INTERACTION,
+} from '../theme/clinicalTheme';
+import { useLanguage } from '../i18n/LanguageContext';
 
-interface ClinicalOptionProps {
+export interface ClinicalOptionProps {
   label: string;
   selected?: boolean;
   onPress: () => void;
@@ -19,6 +27,9 @@ export const ClinicalOption: React.FC<ClinicalOptionProps> = ({
   variant = 'default',
   indexBadge,
 }) => {
+  const { language } = useLanguage();
+  const isHindi = language === 'hi';
+
   const formattedIndex =
     typeof indexBadge === 'number'
       ? indexBadge < 10
@@ -32,11 +43,15 @@ export const ClinicalOption: React.FC<ClinicalOptionProps> = ({
         styles.optionButton,
         selected && styles.optionSelected,
         variant === 'success' && styles.optionSuccess,
+        variant === 'urgent' && styles.optionUrgent,
         disabled && styles.optionDisabled,
       ]}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={INTERACTION.pressOpacity}
+      accessibilityRole="radio"
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={`${formattedIndex ? `${formattedIndex}. ` : ''}${label}`}
     >
       <View style={styles.contentRow}>
         {formattedIndex !== undefined && (
@@ -46,7 +61,13 @@ export const ClinicalOption: React.FC<ClinicalOptionProps> = ({
             </Text>
           </View>
         )}
-        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+        <Text
+          style={[
+            styles.optionText,
+            selected && styles.optionTextSelected,
+            isHindi && styles.optionTextHindi,
+          ]}
+        >
           {label}
         </Text>
       </View>
@@ -57,7 +78,7 @@ export const ClinicalOption: React.FC<ClinicalOptionProps> = ({
   );
 };
 
-interface ClinicalCheckboxProps {
+export interface ClinicalCheckboxProps {
   label: string;
   checked: boolean;
   onToggle: () => void;
@@ -70,24 +91,40 @@ export const ClinicalCheckbox: React.FC<ClinicalCheckboxProps> = ({
   onToggle,
   disabled = false,
 }) => {
+  const { language } = useLanguage();
+  const isHindi = language === 'hi';
+
   return (
     <TouchableOpacity
-      style={[styles.checkboxContainer, checked && styles.checkboxActive, disabled && styles.optionDisabled]}
+      style={[
+        styles.checkboxContainer,
+        checked && styles.checkboxActive,
+        disabled && styles.optionDisabled,
+      ]}
       onPress={onToggle}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={INTERACTION.pressOpacity}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked, disabled }}
+      accessibilityLabel={label}
     >
       <View style={[styles.box, checked && styles.boxChecked]}>
         {checked && <Text style={styles.checkmark}>✓</Text>}
       </View>
-      <Text style={[styles.checkboxLabel, checked && styles.checkboxLabelActive]}>
+      <Text
+        style={[
+          styles.checkboxLabel,
+          checked && styles.checkboxLabelActive,
+          isHindi && styles.checkboxLabelHindi,
+        ]}
+      >
         {label}
       </Text>
     </TouchableOpacity>
   );
 };
 
-interface ProgressIndicatorProps {
+export interface ProgressIndicatorProps {
   phaseTitle: string;
   stepText?: string;
   progressPercent: number; // 0 to 100
@@ -101,7 +138,12 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   const clamped = Math.max(0, Math.min(100, progressPercent));
 
   return (
-    <View style={styles.progressCard}>
+    <View
+      style={styles.progressCard}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: clamped }}
+      accessibilityLabel={`${phaseTitle}. ${stepText || ''}`}
+    >
       <View style={styles.progressRow}>
         <Text style={styles.phaseTitle}>{phaseTitle}</Text>
         {stepText ? <Text style={styles.stepText}>{stepText}</Text> : null}
@@ -115,26 +157,31 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
 
 const styles = StyleSheet.create({
   optionButton: {
-    minHeight: ClinicalTheme.dimensions.optionRowHeight,
+    minHeight: TOUCH_TARGETS.optionRow, // 58dp
     backgroundColor: ClinicalTheme.colors.surface,
     borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.border,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: ClinicalTheme.spacing.md + 2,
-    paddingVertical: ClinicalTheme.spacing.md,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    borderRadius: RADIUS.md + 2, // 10dp
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: ClinicalTheme.spacing.sm,
+    marginBottom: SPACING.sm,
     ...ClinicalTheme.shadows.card,
   },
   optionSelected: {
     backgroundColor: ClinicalTheme.colors.primarySoft,
-    borderColor: ClinicalTheme.colors.primaryAccent,
+    borderColor: ClinicalTheme.colors.borderFocus,
+    borderWidth: 2,
   },
   optionSuccess: {
     backgroundColor: ClinicalTheme.colors.riskLowBg,
     borderColor: ClinicalTheme.colors.riskLow,
+  },
+  optionUrgent: {
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
+    borderColor: ClinicalTheme.colors.riskUrgent,
   },
   optionDisabled: {
     opacity: 0.6,
@@ -143,14 +190,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    paddingRight: ClinicalTheme.spacing.md,
-    gap: ClinicalTheme.spacing.md,
+    paddingRight: SPACING.md,
+    gap: SPACING.md,
   },
   indexBadge: {
     width: 32,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    borderRadius: RADIUS.sm,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
     borderWidth: 1,
     borderColor: ClinicalTheme.colors.borderMedium,
     justifyContent: 'center',
@@ -171,10 +218,13 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
+    lineHeight: 23,
     fontWeight: '600',
     color: ClinicalTheme.colors.textPrimary,
     flex: 1,
-    lineHeight: 22,
+  },
+  optionTextHindi: {
+    lineHeight: ClinicalTheme.typographyHindi.body.lineHeight, // 25px
   },
   optionTextSelected: {
     color: ClinicalTheme.colors.primaryLight,
@@ -199,27 +249,28 @@ const styles = StyleSheet.create({
     backgroundColor: ClinicalTheme.colors.primaryAccent,
   },
   checkboxContainer: {
-    minHeight: ClinicalTheme.dimensions.checkboxRowHeight,
+    minHeight: TOUCH_TARGETS.checkboxRow, // 58dp
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ClinicalTheme.spacing.md,
+    gap: SPACING.md,
     backgroundColor: ClinicalTheme.colors.surface,
     borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.border,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: ClinicalTheme.spacing.md + 2,
-    paddingVertical: ClinicalTheme.spacing.md,
-    marginBottom: ClinicalTheme.spacing.sm,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    borderRadius: RADIUS.md + 2,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.sm,
     ...ClinicalTheme.shadows.card,
   },
   checkboxActive: {
     backgroundColor: ClinicalTheme.colors.primarySoft,
-    borderColor: ClinicalTheme.colors.primaryAccent,
+    borderColor: ClinicalTheme.colors.borderFocus,
+    borderWidth: 2,
   },
   box: {
     width: 26,
     height: 26,
-    borderRadius: 6,
+    borderRadius: RADIUS.xs + 2,
     borderWidth: 2,
     borderColor: ClinicalTheme.colors.borderMedium,
     justifyContent: 'center',
@@ -237,10 +288,13 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 16,
+    lineHeight: 23,
     color: ClinicalTheme.colors.textSecondary,
     fontWeight: '500',
     flex: 1,
-    lineHeight: 22,
+  },
+  checkboxLabelHindi: {
+    lineHeight: ClinicalTheme.typographyHindi.body.lineHeight, // 25px
   },
   checkboxLabelActive: {
     color: ClinicalTheme.colors.textPrimary,
@@ -248,35 +302,37 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     backgroundColor: ClinicalTheme.colors.surface,
-    borderRadius: ClinicalTheme.radius.md,
+    borderRadius: RADIUS.md + 2,
     borderWidth: 1,
-    borderColor: ClinicalTheme.colors.border,
-    paddingHorizontal: ClinicalTheme.spacing.lg,
-    paddingVertical: ClinicalTheme.spacing.md,
-    marginBottom: ClinicalTheme.spacing.lg,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.lg,
     ...ClinicalTheme.shadows.card,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: ClinicalTheme.spacing.sm,
+    marginBottom: SPACING.sm,
   },
   phaseTitle: {
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
     color: ClinicalTheme.colors.primary,
     letterSpacing: 0.3,
   },
   stepText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     color: ClinicalTheme.colors.primaryAccent,
   },
   track: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
     overflow: 'hidden',
   },
   fill: {

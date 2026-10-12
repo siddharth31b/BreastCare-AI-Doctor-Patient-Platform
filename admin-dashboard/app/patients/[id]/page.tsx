@@ -510,7 +510,7 @@ export default function PatientDetailPage() {
                       </h3>
 
                       <p className="text-xs text-slate-600">
-                        Conducted by <strong className="text-slate-800">{activeAssessment.doctors?.name || activeAssessment.doctor?.name || 'Dr. Priya Sharma'}</strong>
+                        Conducted by <strong className="text-slate-800">{activeAssessment.doctors?.name || activeAssessment.doctor?.name || 'Assigned Physician'}</strong>
                         {' '}(Station ID: <span className="font-mono text-slate-700">{activeAssessment.doctors?.tablet_id || activeAssessment.doctor?.tablet_id || 'TABLET-DEFAULT'}</span>)
                         <br />
                         Session Started: {new Date(activeAssessment.started_at).toLocaleString()}

@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
+import { ClinicalTheme } from '../theme/clinicalTheme';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isLoading) {
@@ -21,12 +24,17 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoBadge}>
-        <Text style={styles.logoIcon}>🎗️</Text>
+      <View style={styles.monogramBox}>
+        <Text style={styles.monogramText}>BC</Text>
       </View>
-      <Text style={styles.title}>BreastCare AI</Text>
-      <Text style={styles.subtitle}>Doctor Tablet Clinical Assessment Station</Text>
-      <ActivityIndicator size="large" color="#0284c7" style={styles.loader} />
+      <Text style={styles.brandTitle}>{t('brandTitle')}</Text>
+      <Text style={styles.appTitle}>{t('appTitle')}</Text>
+      <Text style={styles.subtitle}>{t('brandSubtitle')}</Text>
+      <ActivityIndicator
+        size="large"
+        color={ClinicalTheme.colors.primaryAccent}
+        style={styles.loader}
+      />
     </View>
   );
 };
@@ -34,38 +42,49 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: ClinicalTheme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: ClinicalTheme.spacing.xl,
   },
-  logoBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#1e293b',
+  monogramBox: {
+    width: 84,
+    height: 84,
+    borderRadius: ClinicalTheme.radius.xl,
+    backgroundColor: ClinicalTheme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#38bdf8',
+    marginBottom: ClinicalTheme.spacing.lg,
+    ...ClinicalTheme.shadows.elevated,
   },
-  logoIcon: {
-    fontSize: 40,
-  },
-  title: {
+  monogramText: {
     fontSize: 32,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textWhite,
+    letterSpacing: 1,
+  },
+  brandTitle: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#f8fafc',
-    letterSpacing: 0.5,
+    color: ClinicalTheme.colors.secondary,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  appTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textPrimary,
+    letterSpacing: -0.5,
+    marginTop: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginTop: 8,
+    fontSize: 15,
+    color: ClinicalTheme.colors.textMuted,
+    marginTop: 6,
     textAlign: 'center',
+    fontWeight: '500',
   },
   loader: {
-    marginTop: 36,
+    marginTop: ClinicalTheme.spacing.xxl,
   },
 });

@@ -33,7 +33,7 @@ export function Header() {
           </div>
           <div className="hidden sm:block text-left">
             <p className="text-xs font-bold text-slate-900 leading-none">Clinical Administrator</p>
-            <p className="text-[11px] text-slate-500 mt-1">admin@breastcare.ai</p>
+            <p className="text-[11px] text-slate-500 mt-1">admin@narisetu.org</p>
           </div>
         </div>
 

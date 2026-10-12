@@ -3,8 +3,11 @@ const assert = require('node:assert/strict');
 const http = require('http');
 const app = require('../server');
 
+const repo = require('../db/repository');
+
 let server;
 let baseUrl;
+let createdPatientId = null;
 
 test.before(async () => {
   server = http.createServer(app);
@@ -14,6 +17,11 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  if (createdPatientId) {
+    try {
+      await repo.deletePatient(createdPatientId);
+    } catch (_) {}
+  }
   await new Promise((resolve) => server.close(resolve));
 });
 
@@ -38,7 +46,7 @@ test('Physician Validation Workflow: Full Clinical Review Lifecycle', async (t) 
     headers: headersDocA,
     body: JSON.stringify({
       patient_code: pCode,
-      name: 'Kavita Roy',
+      name: 'Test Patient Delta',
       age: 44,
       gender: 'Female',
       phone: '+91 99887 76655'
@@ -46,6 +54,7 @@ test('Physician Validation Workflow: Full Clinical Review Lifecycle', async (t) 
   });
   assert.equal(pRes.status, 201);
   const patient = (await pRes.json()).patient;
+  createdPatientId = patient.id;
 
   const aRes = await fetch(`${baseUrl}/assessments`, {
     method: 'POST',

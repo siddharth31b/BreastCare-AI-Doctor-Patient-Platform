@@ -1,6 +1,6 @@
-# BreastCare AI — Production Deployment & External Services Guide
+# NariSetu – BreastCare AI — Production Deployment & External Services Guide
 
-This document outlines the step-by-step instructions for provisioning external cloud services and deploying the BreastCare AI platform to production.
+This document outlines the step-by-step instructions for provisioning external cloud services and deploying the NariSetu platform to production.
 
 ---
 

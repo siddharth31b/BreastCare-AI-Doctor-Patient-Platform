@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const repo = require('../db/repository');
+const realtimeBridge = require('../services/realtimeBridge');
 const { calculateClinicalRiskAnalysis } = require('../services/clinicalEngine');
 
 router.use(authenticate);
@@ -40,6 +41,12 @@ router.post('/', async (req, res, next) => {
       patient_id,
       risk_profile: risk_profile || {},
       status: 'IN_PROGRESS'
+    });
+
+    realtimeBridge.notifyClinicalEvent('ASSESSMENT_CREATED', {
+      assessmentId: assessment.id,
+      doctorId,
+      patientId: patient_id
     });
 
     res.status(201).json({
@@ -213,6 +220,12 @@ router.post('/:id/submit', async (req, res, next) => {
       completed_at: new Date().toISOString()
     });
 
+    realtimeBridge.notifyClinicalEvent('ASSESSMENT_SUBMITTED', {
+      assessmentId: updatedAssessment.id,
+      doctorId: assessment.doctor_id,
+      status: 'PENDING_DOCTOR_REVIEW'
+    });
+
     res.status(200).json({
       success: true,
       message: 'Assessment completed and submitted for doctor review.',
@@ -273,6 +286,12 @@ router.post('/:id/validate', async (req, res, next) => {
       reviewed_by: doctorName,
       reviewed_at: new Date().toISOString(),
       doctor_note: doctorNote
+    });
+
+    realtimeBridge.notifyClinicalEvent('ASSESSMENT_VALIDATED', {
+      assessmentId: updated.id,
+      doctorId: assessment.doctor_id,
+      status: 'DOCTOR_VALIDATED'
     });
 
     res.status(200).json({
@@ -337,6 +356,12 @@ router.post('/:id/reassessment', async (req, res, next) => {
       reviewed_at: new Date().toISOString(),
       reassessment_reason: reason.trim(),
       doctor_note: doctorNote
+    });
+
+    realtimeBridge.notifyClinicalEvent('ASSESSMENT_REASSESSMENT', {
+      assessmentId: updated.id,
+      doctorId: assessment.doctor_id,
+      status: 'REASSESSMENT_REQUESTED'
     });
 
     res.status(200).json({

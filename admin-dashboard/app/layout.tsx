@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BreastCare AI | Clinical Administration & Breast Health Platform",
-  description: "Hospital-grade clinical administration and breast cancer risk screening platform.",
+  title: "NariSetu Admin",
+  description: "NariSetu clinical patient assessment and doctor review platform.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

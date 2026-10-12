@@ -1,10 +1,15 @@
 import { Platform } from 'react-native';
 
-// In Android emulator localhost is 10.0.2.2, in physical tablet/iOS use LAN IP or localhost
-const defaultHost = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+// Production Render backend as primary fallback so physical tablet never fails on 10.0.2.2 emulator IP
+const PRODUCTION_API_URL = 'https://breastcare-backend-atyz.onrender.com/api';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || defaultHost;
-export const TABLET_ID = process.env.EXPO_PUBLIC_TABLET_ID || 'TABLET-CLINIC-01';
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || PRODUCTION_API_URL).trim();
+export const TABLET_ID = (process.env.EXPO_PUBLIC_TABLET_ID || 'TABLET-CLINIC-01').trim();
+
+if (__DEV__) {
+  console.log(`[Config] Active Backend API: ${API_URL}`);
+  console.log(`[Config] Tablet ID: ${TABLET_ID}`);
+}
 
 export const FIREBASE_CONFIG = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',

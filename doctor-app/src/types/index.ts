@@ -14,11 +14,23 @@ export interface Patient {
   id: string;
   patient_code: string;
   name: string;
+  full_name?: string;
   age: number;
   gender: string;
   phone?: string;
   face_photo_url?: string | null;
   created_at?: string;
+}
+
+export function getPatientDisplayName(patient?: Partial<Patient> | null): string {
+  if (!patient) return 'Patient information unavailable';
+  const name = (patient.full_name || patient.name || '').trim();
+  return name.length > 0 ? name : 'Patient information unavailable';
+}
+
+export function getPatientCodeDisplay(patient?: Partial<Patient> | null): string {
+  if (!patient || !patient.patient_code) return 'ID Pending';
+  return patient.patient_code;
 }
 
 export interface Assessment {
@@ -31,6 +43,7 @@ export interface Assessment {
   started_at: string;
   completed_at?: string;
   patient?: Patient;
+  patients?: Patient;
   answers?: MobileQuestionnaireAnswer[];
   reviewed_by?: string | null;
   reviewed_at?: string | null;
@@ -59,7 +72,7 @@ export type RootStackParamList = {
     assessmentId: string;
     clinicalResult: ClinicalRiskAnalysisResult;
   };
-  AssessmentHistory: undefined;
+  AssessmentHistory: { initialFilter?: 'ALL' | 'PENDING' | 'VALIDATED' | 'REASSESSMENT' | 'URGENT' } | undefined;
   PatientDetail: { patientId: string };
   PhysicianReview: { assessmentId: string; patient?: Patient };
 };

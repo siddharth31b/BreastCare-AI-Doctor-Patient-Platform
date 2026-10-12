@@ -1,19 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { ClinicalTheme } from '../theme/clinicalTheme';
+import { ClinicalTheme, SPACING, RADIUS, ELEVATION } from '../theme/clinicalTheme';
 import { Patient, getPatientDisplayName, getPatientCodeDisplay } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
-interface PatientSummaryCardProps {
+export interface PatientSummaryCardProps {
   patient: Partial<Patient>;
   extraBadge?: React.ReactNode;
+  compact?: boolean;
 }
 
 export const PatientSummaryCard: React.FC<PatientSummaryCardProps> = ({
   patient,
   extraBadge,
+  compact = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isHindi = language === 'hi';
   const displayName = getPatientDisplayName(patient);
   const patientCode = getPatientCodeDisplay(patient);
   const initial = displayName.charAt(0).toUpperCase();
@@ -28,20 +31,30 @@ export const PatientSummaryCard: React.FC<PatientSummaryCardProps> = ({
   };
 
   return (
-    <View style={styles.card}>
-      <View style={styles.avatarBox}>
+    <View
+      style={[styles.card, compact && styles.cardCompact]}
+      accessibilityRole="summary"
+      accessibilityLabel={`Patient: ${displayName}, ${patientCode}`}
+    >
+      <View style={[styles.avatarBox, compact && styles.avatarBoxCompact]}>
         {patient.face_photo_url ? (
-          <Image source={{ uri: patient.face_photo_url }} style={styles.photo} />
+          <Image
+            source={{ uri: patient.face_photo_url }}
+            style={styles.photo}
+            resizeMode="cover"
+          />
         ) : (
           <View style={styles.initialsBox}>
-            <Text style={styles.initialsText}>{initial}</Text>
+            <Text style={[styles.initialsText, compact && styles.initialsTextCompact]}>
+              {initial}
+            </Text>
           </View>
         )}
       </View>
 
       <View style={styles.infoCol}>
         <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, isHindi && styles.nameHindi]} numberOfLines={1}>
             {displayName}
           </Text>
           {extraBadge}
@@ -52,11 +65,15 @@ export const PatientSummaryCard: React.FC<PatientSummaryCardProps> = ({
         <View style={styles.demographicsRow}>
           {patient.age !== undefined && (
             <View style={styles.pill}>
-              <Text style={styles.pillText}>{patient.age} {t('years')}</Text>
+              <Text style={[styles.pillText, isHindi && styles.pillTextHindi]}>
+                {patient.age} {t('years')}
+              </Text>
             </View>
           )}
           <View style={styles.pill}>
-            <Text style={styles.pillText}>{formatGender(patient.gender)}</Text>
+            <Text style={[styles.pillText, isHindi && styles.pillTextHindi]}>
+              {formatGender(patient.gender)}
+            </Text>
           </View>
           {patient.phone ? (
             <View style={styles.pill}>
@@ -72,20 +89,29 @@ export const PatientSummaryCard: React.FC<PatientSummaryCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: ClinicalTheme.colors.surface,
-    borderRadius: ClinicalTheme.radius.lg,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: ClinicalTheme.colors.border,
-    padding: ClinicalTheme.spacing.lg,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    padding: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ClinicalTheme.spacing.lg,
+    gap: SPACING.lg,
     ...ClinicalTheme.shadows.card,
+  },
+  cardCompact: {
+    padding: SPACING.md,
+    gap: SPACING.md,
   },
   avatarBox: {
     width: 64,
     height: 64,
     borderRadius: 32,
     overflow: 'hidden',
+  },
+  avatarBoxCompact: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   photo: {
     width: '100%',
@@ -99,12 +125,14 @@ const styles = StyleSheet.create({
     borderColor: ClinicalTheme.colors.primaryAccent,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 32,
   },
   initialsText: {
     fontSize: 24,
     fontWeight: '800',
     color: ClinicalTheme.colors.primaryAccent,
+  },
+  initialsTextCompact: {
+    fontSize: 18,
   },
   infoCol: {
     flex: 1,
@@ -113,16 +141,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: ClinicalTheme.spacing.sm,
+    gap: SPACING.sm,
   },
   name: {
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '800',
     color: ClinicalTheme.colors.textPrimary,
     letterSpacing: -0.2,
+    flex: 1,
+  },
+  nameHindi: {
+    lineHeight: 26,
   },
   code: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
     color: ClinicalTheme.colors.primaryAccent,
     marginTop: 2,
@@ -130,20 +164,24 @@ const styles = StyleSheet.create({
   demographicsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: ClinicalTheme.spacing.xs,
-    marginTop: ClinicalTheme.spacing.sm,
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   pill: {
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: ClinicalTheme.radius.xs,
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
-    borderColor: ClinicalTheme.colors.border,
+    borderColor: ClinicalTheme.colors.borderDefault,
   },
   pillText: {
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
     color: ClinicalTheme.colors.textSecondary,
+  },
+  pillTextHindi: {
+    lineHeight: 18,
   },
 });

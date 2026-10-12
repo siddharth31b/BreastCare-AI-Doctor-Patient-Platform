@@ -11,6 +11,8 @@ export interface RiskProfileData {
   menarche?: string;
   biopsy?: string;
   menopause?: string;
+  ageAtMarriage?: string;
+  diet?: string;
 }
 
 export type RiskTier = "Low" | "Moderate" | "High" | "Urgent";

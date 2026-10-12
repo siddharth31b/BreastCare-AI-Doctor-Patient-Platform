@@ -6,6 +6,8 @@ const repo = require('../db/repository');
 
 let server;
 let baseUrl;
+let patientAId = null;
+let patientBId = null;
 
 test.before(async () => {
   server = http.createServer(app);
@@ -15,6 +17,12 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  if (patientAId) {
+    try { await repo.deletePatient(patientAId); } catch (_) {}
+  }
+  if (patientBId) {
+    try { await repo.deletePatient(patientBId); } catch (_) {}
+  }
   await new Promise((resolve) => server.close(resolve));
 });
 
@@ -36,6 +44,7 @@ test('Role Isolation: Doctor A cannot access Doctor B patients or assessments, A
   });
   assert.equal(pResA.status, 201);
   const patientA = (await pResA.json()).patient;
+  patientAId = patientA.id;
 
   // 3. Doctor B creates Patient B
   const pResB = await fetch(`${baseUrl}/patients`, {
@@ -45,6 +54,7 @@ test('Role Isolation: Doctor A cannot access Doctor B patients or assessments, A
   });
   assert.equal(pResB.status, 201);
   const patientB = (await pResB.json()).patient;
+  patientBId = patientB.id;
 
   // 4. Doctor A tries to access Patient B -> MUST BE 403 Forbidden
   const leakRes = await fetch(`${baseUrl}/patients/${patientB.id}`, {

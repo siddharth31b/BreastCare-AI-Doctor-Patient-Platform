@@ -3,8 +3,11 @@ const assert = require('node:assert/strict');
 const http = require('http');
 const app = require('../server');
 
+const repo = require('../db/repository');
+
 let server;
 let baseUrl;
+let createdPatientId = null;
 
 test.before(async () => {
   server = http.createServer(app);
@@ -14,6 +17,11 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  if (createdPatientId) {
+    try {
+      await repo.deletePatient(createdPatientId);
+    } catch (_) {}
+  }
   await new Promise((resolve) => server.close(resolve));
 });
 
@@ -63,7 +71,7 @@ test('API: End-to-end patient registration, photo upload, assessment and clinica
     method: 'POST',
     headers: docAuth,
     body: JSON.stringify({
-      name: 'Ananya Sharma',
+      name: 'Test Patient Alfa',
       age: 45,
       gender: 'Female',
       phone: '+91 98765 11223'
@@ -72,6 +80,7 @@ test('API: End-to-end patient registration, photo upload, assessment and clinica
   assert.equal(patientRes.status, 201);
   const patientData = await patientRes.json();
   const patientId = patientData.patient.id;
+  createdPatientId = patientId;
   assert.ok(patientId);
 
   // 2. Upload Face Photo (base64)

@@ -1,12 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, getPatientDisplayName, getPatientCodeDisplay } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
+import { ClinicalTheme } from '../theme/clinicalTheme';
+import { RiskBadge } from '../components/ClinicalBadges';
+import { PrimaryButton, SecondaryButton } from '../components/ClinicalButtons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SubmissionSuccess'>;
 
 export const SubmissionSuccessScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { patient, clinicalResult } = route.params;
+  const { patient, assessmentId, clinicalResult } = route.params;
+  const { t, language } = useLanguage();
+
+  const displayName = getPatientDisplayName(patient);
+  const patientCode = getPatientCodeDisplay(patient);
 
   return (
     <View style={styles.container}>
@@ -15,32 +23,52 @@ export const SubmissionSuccessScreen: React.FC<Props> = ({ route, navigation }) 
           <Text style={styles.checkIcon}>✓</Text>
         </View>
 
-        <Text style={styles.title}>Assessment Completed</Text>
+        <Text style={styles.title}>
+          {t('assessmentSubmitted')}
+        </Text>
         <Text style={styles.subtitle}>
-          The clinical findings for patient {patient.name} ({patient.patient_code}) have been securely stored in the medical database.
+          {t('assessmentAddedSuccess')}
         </Text>
 
-        <View style={styles.summaryBadge}>
-          <Text style={styles.summaryBadgeLabel}>Assessed Status</Text>
-          <Text style={styles.summaryBadgeVal}>
-            {clinicalResult.tier.toUpperCase()} RISK TIER ({clinicalResult.totalScore} pts)
-          </Text>
+        <View style={styles.dossierBox}>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierLabel}>{t('patientLabel')}</Text>
+            <Text style={styles.dossierVal}>{displayName} ({patientCode})</Text>
+          </View>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierLabel}>{t('assessmentLabel')}</Text>
+            <Text style={styles.dossierVal}>#{assessmentId}</Text>
+          </View>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierLabel}>{t('statusLabel')}</Text>
+            <Text style={[styles.dossierVal, styles.dossierStatus]}>{t('pendingPhysicianReview')}</Text>
+          </View>
+          <View style={[styles.dossierRow, styles.dossierBorderTop]}>
+            <Text style={styles.dossierLabel}>{t('stratificationLabel')}</Text>
+            <View style={styles.stratRow}>
+              <RiskBadge tier={clinicalResult.tier} size="sm" />
+              <Text style={styles.scoreText}>{clinicalResult.totalScore} {t('points')}</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.primaryBtn}
+          <PrimaryButton
+            title={t('returnToDashboard')}
             onPress={() => navigation.navigate('Dashboard')}
-          >
-            <Text style={styles.primaryBtnText}>Return to Doctor Dashboard</Text>
-          </TouchableOpacity>
+            style={styles.actionBtn}
+          />
 
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => navigation.navigate('NewPatient')}
-          >
-            <Text style={styles.secondaryBtnText}>+ Start Another Patient Assessment</Text>
-          </TouchableOpacity>
+          <SecondaryButton
+            title={t('viewAssessment')}
+            onPress={() =>
+              navigation.replace('PhysicianReview', {
+                assessmentId,
+                patient,
+              })
+            }
+            style={styles.actionBtn}
+          />
         </View>
       </View>
     </View>
@@ -50,102 +78,103 @@ export const SubmissionSuccessScreen: React.FC<Props> = ({ route, navigation }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: ClinicalTheme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: ClinicalTheme.spacing.xl,
   },
   card: {
     width: '100%',
-    maxWidth: 540,
-    backgroundColor: '#1e293b',
-    borderRadius: 24,
-    padding: 36,
+    maxWidth: 560,
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderRadius: ClinicalTheme.radius.xl,
+    padding: ClinicalTheme.spacing.xxl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
+    borderColor: ClinicalTheme.colors.border,
+    ...ClinicalTheme.shadows.elevated,
   },
   checkCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: '#059669',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: ClinicalTheme.colors.riskLowBg,
+    borderWidth: 2,
+    borderColor: ClinicalTheme.colors.riskLowBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: ClinicalTheme.spacing.lg,
   },
   checkIcon: {
-    color: '#ffffff',
-    fontSize: 44,
+    color: ClinicalTheme.colors.riskLow,
+    fontSize: 38,
     fontWeight: '900',
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#f8fafc',
+    color: ClinicalTheme.colors.textPrimary,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#94a3b8',
+    fontSize: 14,
+    color: ClinicalTheme.colors.textMuted,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 22,
+    maxWidth: 440,
   },
-  summaryBadge: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  dossierBox: {
+    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    borderRadius: ClinicalTheme.radius.md,
+    padding: ClinicalTheme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginTop: 20,
+    borderColor: ClinicalTheme.colors.border,
+    marginTop: ClinicalTheme.spacing.xl,
+    width: '100%',
+    gap: 10,
+  },
+  dossierRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  summaryBadgeLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  summaryBadgeVal: {
-    fontSize: 16,
-    color: '#38bdf8',
-    fontWeight: '800',
+  dossierBorderTop: {
+    borderTopWidth: 1,
+    borderTopColor: ClinicalTheme.colors.border,
+    paddingTop: 10,
     marginTop: 2,
+  },
+  dossierLabel: {
+    fontSize: 13,
+    color: ClinicalTheme.colors.textMuted,
+    fontWeight: '700',
+  },
+  dossierVal: {
+    fontSize: 14,
+    color: ClinicalTheme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  dossierStatus: {
+    color: ClinicalTheme.colors.riskModerate,
+  },
+  stratRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scoreText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textPrimary,
   },
   actions: {
     width: '100%',
-    marginTop: 32,
-    gap: 12,
+    marginTop: ClinicalTheme.spacing.xl,
+    gap: ClinicalTheme.spacing.md,
   },
-  primaryBtn: {
-    backgroundColor: '#0284c7',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryBtn: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '600',
+  actionBtn: {
+    minHeight: 52,
   },
 });

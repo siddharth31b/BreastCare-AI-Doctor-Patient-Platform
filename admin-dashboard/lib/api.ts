@@ -121,9 +121,9 @@ export interface Analytics {
 export const adminApi = {
   getAuthToken(): string {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('breastcare_admin_token') || 'demo-admin-token';
+      return localStorage.getItem('breastcare_admin_token') || '';
     }
-    return 'demo-admin-token';
+    return '';
   },
 
   setAuthToken(token: string) {

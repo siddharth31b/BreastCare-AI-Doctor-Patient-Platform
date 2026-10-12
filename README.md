@@ -1,4 +1,4 @@
-# BreastCare AI - Clinical Patient Assessment and Triage Platform
+# NariSetu – BreastCare AI Clinical Patient Assessment and Triage Platform
 
 A hospital-grade clinical triage and patient assessment platform designed for early breast health screening. The system integrates doctor tablet stations, multilingual speech assistance, standardized clinical risk stratification, physician validation workflows, and centralized hospital administration.
 
@@ -10,9 +10,9 @@ The platform is structured into three primary subsystems:
 
 ```
 BreastCare-System/
-├── backend/            Node.js and Express REST API (Supabase & Firebase Admin SDK)
-├── doctor-app/         React Native (Expo SDK 57) Doctor Tablet Application
-├── admin-dashboard/    Next.js 16 (App Router) Clinical Administration Web Portal
+├── backend/            NariSetu Backend — Node.js and Express REST API (Supabase & Firebase Admin SDK)
+├── doctor-app/         NariSetu Doctor — React Native (Expo SDK 57) Doctor Tablet Application
+├── admin-dashboard/    NariSetu Admin — Next.js 16 (App Router) Clinical Administration Web Portal
 ├── DEPLOYMENT.md       Production Deployment and Credentials Guide
 ├── DEMO_ACCOUNTS.md    Verified Demo Doctor and Administrator Credentials
 └── DEMO_SETUP.md       End-to-End System Demonstration Walkthrough

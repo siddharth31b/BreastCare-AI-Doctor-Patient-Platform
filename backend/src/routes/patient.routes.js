@@ -4,6 +4,7 @@ const multer = require('multer');
 const { z } = require('zod');
 const { authenticate } = require('../middleware/auth');
 const repo = require('../db/repository');
+const realtimeBridge = require('../services/realtimeBridge');
 
 // Configure Multer for in-memory handling before uploading to Supabase Storage
 const upload = multer({
@@ -20,11 +21,16 @@ const upload = multer({
 
 // Zod schema for patient validation
 const patientSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters').optional(),
   age: z.coerce.number().int().min(1).max(125, 'Age must be between 1 and 125'),
   gender: z.string().default('Female'),
   phone: z.string().optional().nullable(),
-  patient_code: z.string().optional()
+  patient_code: z.string().optional(),
+  face_photo_url: z.string().optional().nullable()
+}).refine(data => !!(data.name || data.full_name), {
+  message: 'Name or full_name is required and must be at least 2 characters',
+  path: ['name']
 });
 
 router.use(authenticate);
@@ -48,6 +54,12 @@ router.post('/', async (req, res, next) => {
 
     const doctorId = req.role === 'DOCTOR' ? req.user.id : null;
     const patient = await repo.createPatient(parseResult.data, doctorId);
+
+    // Notify connected tablets and admin portal in real time
+    realtimeBridge.notifyClinicalEvent('PATIENT_REGISTERED', {
+      patientId: patient.id,
+      doctorId,
+    });
 
     res.status(201).json({
       success: true,

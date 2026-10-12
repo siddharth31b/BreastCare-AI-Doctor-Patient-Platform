@@ -7,9 +7,18 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { ClinicalTheme } from '../theme/clinicalTheme';
+import {
+  ClinicalTheme,
+  TOUCH_TARGETS,
+  SPACING,
+  RADIUS,
+  INTERACTION,
+  ELEVATION,
+  getButtonVariant,
+} from '../theme/clinicalTheme';
+import { useLanguage } from '../i18n/LanguageContext';
 
-interface ButtonProps {
+export interface ButtonProps {
   title: string;
   onPress: () => void;
   loading?: boolean;
@@ -30,31 +39,36 @@ export const PrimaryButton: React.FC<ButtonProps> = ({
   textStyle,
   variant = 'primary',
 }) => {
+  const { language } = useLanguage();
+  const isHindi = language === 'hi';
   const isInactive = disabled || loading;
-
-  const getBgColor = () => {
-    if (variant === 'cobalt') return ClinicalTheme.colors.primaryAccent;
-    if (variant === 'teal') return ClinicalTheme.colors.secondary;
-    if (variant === 'danger') return ClinicalTheme.colors.riskUrgent;
-    return ClinicalTheme.colors.primary; // Medical deep navy #0A2540
-  };
+  const variantColors = getButtonVariant(variant);
 
   return (
     <TouchableOpacity
       style={[
         styles.primaryButton,
-        { backgroundColor: getBgColor() },
-        isInactive && styles.disabledButton,
+        { backgroundColor: variantColors.backgroundColor },
+        isInactive && styles.disabledPrimaryButton,
         style,
       ]}
       onPress={onPress}
       disabled={isInactive}
-      activeOpacity={0.85}
+      activeOpacity={INTERACTION.pressOpacity}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isInactive, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={ClinicalTheme.colors.textWhite} size="small" />
       ) : (
-        <Text style={[styles.primaryButtonText, textStyle]}>
+        <Text
+          style={[
+            styles.primaryButtonText,
+            isHindi && styles.buttonTextHindi,
+            textStyle,
+          ]}
+        >
           {icon ? `${icon}  ` : ''}
           {title}
         </Text>
@@ -72,19 +86,34 @@ export const SecondaryButton: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const { language } = useLanguage();
+  const isHindi = language === 'hi';
   const isInactive = disabled || loading;
 
   return (
     <TouchableOpacity
-      style={[styles.secondaryButton, isInactive && styles.disabledButton, style]}
+      style={[
+        styles.secondaryButton,
+        isInactive && styles.disabledSecondaryButton,
+        style,
+      ]}
       onPress={onPress}
       disabled={isInactive}
-      activeOpacity={0.85}
+      activeOpacity={INTERACTION.pressOpacity}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isInactive, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={ClinicalTheme.colors.textSecondary} size="small" />
       ) : (
-        <Text style={[styles.secondaryButtonText, textStyle]}>
+        <Text
+          style={[
+            styles.secondaryButtonText,
+            isHindi && styles.buttonTextHindi,
+            textStyle,
+          ]}
+        >
           {icon ? `${icon}  ` : ''}
           {title}
         </Text>
@@ -95,10 +124,10 @@ export const SecondaryButton: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   primaryButton: {
-    minHeight: ClinicalTheme.dimensions.buttonHeight,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: ClinicalTheme.spacing.xl,
-    paddingVertical: ClinicalTheme.spacing.md,
+    minHeight: TOUCH_TARGETS.primaryActionHeight,
+    borderRadius: RADIUS.md + 2, // 10dp
+    paddingHorizontal: SPACING['2xl'],
+    paddingVertical: SPACING.md,
     justifyContent: 'center',
     alignItems: 'center',
     ...ClinicalTheme.shadows.card,
@@ -106,27 +135,40 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: ClinicalTheme.colors.textWhite,
     fontSize: ClinicalTheme.typography.button.fontSize,
+    lineHeight: ClinicalTheme.typography.button.lineHeight,
     fontWeight: ClinicalTheme.typography.button.fontWeight,
     letterSpacing: ClinicalTheme.typography.button.letterSpacing,
   },
   secondaryButton: {
-    minHeight: ClinicalTheme.dimensions.buttonHeight,
+    minHeight: TOUCH_TARGETS.secondaryButtonHeight,
     backgroundColor: ClinicalTheme.colors.surface,
     borderWidth: 1.5,
     borderColor: ClinicalTheme.colors.borderMedium,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: ClinicalTheme.spacing.xl,
-    paddingVertical: ClinicalTheme.spacing.md,
+    borderRadius: RADIUS.md + 2,
+    paddingHorizontal: SPACING['2xl'],
+    paddingVertical: SPACING.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: ClinicalTheme.colors.textPrimary,
     fontSize: ClinicalTheme.typography.button.fontSize,
+    lineHeight: ClinicalTheme.typography.button.lineHeight,
     fontWeight: ClinicalTheme.typography.button.fontWeight,
     letterSpacing: ClinicalTheme.typography.button.letterSpacing,
   },
-  disabledButton: {
-    opacity: 0.5,
+  buttonTextHindi: {
+    lineHeight: ClinicalTheme.typographyHindi.button.lineHeight, // 25px
+  },
+  disabledPrimaryButton: {
+    backgroundColor: ClinicalTheme.colors.disabledBg,
+    borderColor: ClinicalTheme.colors.disabledBorder,
+    opacity: 0.65,
+    elevation: ELEVATION.none,
+  },
+  disabledSecondaryButton: {
+    backgroundColor: ClinicalTheme.colors.disabledBg,
+    borderColor: ClinicalTheme.colors.disabledBorder,
+    opacity: 0.65,
   },
 });

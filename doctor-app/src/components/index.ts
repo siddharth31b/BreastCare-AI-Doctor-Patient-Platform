@@ -6,3 +6,4 @@ export * from './SectionHeader';
 export * from './PatientSummaryCard';
 export * from './QuestionnaireComponents';
 export * from './ClinicalStates';
+export * from './SpeechButton';

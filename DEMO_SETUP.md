@@ -1,6 +1,6 @@
-# BreastCare AI — Comprehensive Demonstration & Deployment Setup Guide
+# NariSetu – BreastCare AI — Comprehensive Demonstration & Deployment Setup Guide
 
-This comprehensive guide outlines the end-to-end setup required to run a live demonstration of the **BreastCare AI** platform across physical Android tablets, the Node.js backend, and the Next.js administrative portal.
+This comprehensive guide outlines the end-to-end setup required to run a live demonstration of the **NariSetu** clinical platform across physical Android tablets, the Node.js backend, and the Next.js administrative portal.
 
 ---
 

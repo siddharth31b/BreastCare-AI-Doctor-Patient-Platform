@@ -220,38 +220,42 @@ class Repository {
         .select('patient_id, patients (*)')
         .eq('doctor_id', doctorId);
       if (error) throw error;
-      return (data || []).map(row => row.patients).filter(Boolean);
+      const raw = (data || []).map(row => row.patients).filter(Boolean);
+      return raw.map(p => this.formatPatient(p));
     }
     const patientIds = memoryStore.doctor_patient
       .filter(dp => dp.doctor_id === doctorId)
       .map(dp => dp.patient_id);
-    return memoryStore.patients.filter(p => patientIds.includes(p.id));
+    return memoryStore.patients.filter(p => patientIds.includes(p.id)).map(p => this.formatPatient(p));
   }
 
   async getAllPatients() {
     if (supabase) {
       const { data, error } = await supabase.from('patients').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data || []).map(p => this.formatPatient(p));
     }
-    return [...memoryStore.patients];
+    return memoryStore.patients.map(p => this.formatPatient(p));
   }
 
   async getPatientById(id) {
     if (supabase) {
       const { data, error } = await supabase.from('patients').select('*').eq('id', id).single();
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      return this.formatPatient(data);
     }
-    return memoryStore.patients.find(p => p.id === id) || null;
+    const found = memoryStore.patients.find(p => p.id === id) || null;
+    return this.formatPatient(found);
   }
 
   async createPatient(patientData, doctorId) {
     const patientId = generateId();
+    const patientName = (patientData.full_name || patientData.name || '').trim();
+    const patientCode = patientData.patient_code || `PT-${Math.floor(100000 + Math.random() * 900000)}`;
     const newPatient = {
       id: patientId,
-      patient_code: patientData.patient_code || `PT-${Date.now().toString().slice(-6)}`,
-      name: patientData.name,
+      patient_code: patientCode,
+      name: patientName,
       age: parseInt(patientData.age, 10),
       gender: patientData.gender || 'Female',
       phone: patientData.phone || null,
@@ -270,7 +274,7 @@ class Repository {
           created_at: new Date().toISOString()
         }]);
       }
-      return data;
+      return this.formatPatient(data);
     }
 
     memoryStore.patients.push(newPatient);
@@ -282,7 +286,7 @@ class Repository {
         created_at: new Date().toISOString()
       });
     }
-    return newPatient;
+    return this.formatPatient(newPatient);
   }
 
   async updatePatient(id, updateData) {
@@ -306,6 +310,39 @@ class Repository {
       return memoryStore.patients[idx];
     }
     return null;
+  }
+
+  formatPatient(p) {
+    if (!p) return null;
+    const nameStr = (p.name || p.full_name || '').trim();
+    return {
+      ...p,
+      name: nameStr,
+      full_name: nameStr
+    };
+  }
+
+  async deletePatient(id) {
+    if (supabase) {
+      const { error } = await supabase.from('patients').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    memoryStore.patients = memoryStore.patients.filter(p => p.id !== id);
+    memoryStore.doctor_patient = memoryStore.doctor_patient.filter(dp => dp.patient_id !== id);
+    memoryStore.assessments = memoryStore.assessments.filter(a => a.patient_id !== id);
+    return true;
+  }
+
+  async deleteAssessment(id) {
+    if (supabase) {
+      const { error } = await supabase.from('assessments').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+    memoryStore.assessments = memoryStore.assessments.filter(a => a.id !== id);
+    memoryStore.answers = memoryStore.answers.filter(ans => ans.assessment_id !== id);
+    return true;
   }
 
   // QUESTIONS
@@ -350,8 +387,12 @@ class Repository {
   formatAssessment(a) {
     if (!a) return a;
     const review = (a.risk_analysis && a.risk_analysis.review) || {};
+    const patientObj = a.patient || a.patients || null;
+    const formattedPatient = this.formatPatient(patientObj);
     return {
       ...a,
+      patient: formattedPatient,
+      patients: formattedPatient,
       reviewed_by: a.reviewed_by !== undefined && a.reviewed_by !== null ? a.reviewed_by : (review.reviewed_by || null),
       reviewed_at: a.reviewed_at !== undefined && a.reviewed_at !== null ? a.reviewed_at : (review.reviewed_at || null),
       doctor_note: a.doctor_note !== undefined && a.doctor_note !== null ? a.doctor_note : (review.doctor_note || null),
@@ -381,7 +422,7 @@ class Repository {
     if (supabase) {
       const { data, error } = await supabase
         .from('assessments')
-        .select('*, doctors (name, email, tablet_id), patients (name, patient_code, age, gender)')
+        .select('*, doctors (name, email, tablet_id), patients (*)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).map(a => this.formatAssessment(a));

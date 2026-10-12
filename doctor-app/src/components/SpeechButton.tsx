@@ -7,10 +7,17 @@ import {
   ActivityIndicator,
   ViewStyle,
 } from 'react-native';
-import { ClinicalTheme } from '../theme/clinicalTheme';
+import {
+  ClinicalTheme,
+  TOUCH_TARGETS,
+  SPACING,
+  RADIUS,
+  INTERACTION,
+  ACCESSIBILITY,
+} from '../theme/clinicalTheme';
 import { SpeechPlaybackState } from '../services/speechService';
 
-interface SpeechButtonProps {
+export interface SpeechButtonProps {
   status: SpeechPlaybackState;
   onListen: () => void;
   onPause: () => void;
@@ -20,17 +27,6 @@ interface SpeechButtonProps {
   compact?: boolean;
   style?: ViewStyle;
 }
-
-/**
- * Minimalist Clinical Audio Wave Icon rendered with geometric views (No emojis)
- */
-const AudioWaveGlyph: React.FC<{ active?: boolean }> = ({ active = false }) => (
-  <View style={styles.glyphContainer}>
-    <View style={[styles.waveBar, { height: 7 }, active && styles.waveBarActive]} />
-    <View style={[styles.waveBar, { height: 14 }, active && styles.waveBarActive]} />
-    <View style={[styles.waveBar, { height: 10 }, active && styles.waveBarActive]} />
-  </View>
-);
 
 export const SpeechButton: React.FC<SpeechButtonProps> = ({
   status,
@@ -46,10 +42,14 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
 
   if (status === 'loading') {
     return (
-      <View style={[styles.loadingButton, compact && styles.compactContainer, style]}>
+      <View
+        style={[styles.loadingButton, compact && styles.compactContainer, style]}
+        accessibilityRole="progressbar"
+        accessibilityLabel={isHi ? 'ऑडियो तैयार हो रहा है' : 'Loading audio prompt'}
+      >
         <ActivityIndicator size="small" color={ClinicalTheme.colors.primaryAccent} />
-        <Text style={styles.loadingText}>
-          {isHi ? 'ऑडियो तैयार हो रहा है...' : 'Preparing audio...'}
+        <Text style={[styles.loadingText, isHi && styles.textHindi]}>
+          {isHi ? 'ऑडियो तैयार हो रहा है...' : 'Loading audio...'}
         </Text>
       </View>
     );
@@ -61,26 +61,29 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
         <TouchableOpacity
           style={styles.pauseBtn}
           onPress={onPause}
-          activeOpacity={0.8}
-          accessibilityLabel={isHi ? 'ऑडियो रोकें' : 'Pause speech'}
+          activeOpacity={INTERACTION.pressOpacity}
+          accessibilityLabel={isHi ? 'ऑडियो रोकें' : 'Pause speech prompt'}
           accessibilityRole="button"
+          hitSlop={ACCESSIBILITY.hitSlop}
         >
-          <View style={styles.pauseIconBox}>
-            <View style={styles.pauseBar} />
-            <View style={styles.pauseBar} />
-          </View>
-          <Text style={styles.pauseBtnText}>{isHi ? 'रोकें' : 'Pause'}</Text>
+          <Text style={styles.buttonGlyph}>⏸</Text>
+          <Text style={[styles.pauseBtnText, isHi && styles.btnTextHindi]}>
+            {isHi ? 'रोकें' : 'Pause'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.stopBtn}
           onPress={onStop}
-          activeOpacity={0.8}
-          accessibilityLabel={isHi ? 'ऑडियो बंद करें' : 'Stop speech'}
+          activeOpacity={INTERACTION.pressOpacity}
+          accessibilityLabel={isHi ? 'ऑडियो बंद करें' : 'Stop speech prompt'}
           accessibilityRole="button"
+          hitSlop={ACCESSIBILITY.hitSlop}
         >
-          <View style={styles.stopIconSquare} />
-          <Text style={styles.stopBtnText}>{isHi ? 'बंद करें' : 'Stop'}</Text>
+          <Text style={styles.stopGlyph}>⏹</Text>
+          <Text style={[styles.stopBtnText, isHi && styles.btnTextHindi]}>
+            {isHi ? 'बंद करें' : 'Stop'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -92,23 +95,29 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
         <TouchableOpacity
           style={styles.resumeBtn}
           onPress={onResume}
-          activeOpacity={0.8}
-          accessibilityLabel={isHi ? 'ऑडियो पुनः चालू करें' : 'Resume speech'}
+          activeOpacity={INTERACTION.pressOpacity}
+          accessibilityLabel={isHi ? 'ऑडियो पुनः चालू करें' : 'Resume speech prompt'}
           accessibilityRole="button"
+          hitSlop={ACCESSIBILITY.hitSlop}
         >
-          <Text style={styles.resumeIconTriangle}>▶</Text>
-          <Text style={styles.resumeBtnText}>{isHi ? 'पुनः चालू' : 'Resume'}</Text>
+          <Text style={styles.buttonGlyph}>▶</Text>
+          <Text style={[styles.resumeBtnText, isHi && styles.btnTextHindi]}>
+            {isHi ? 'पुनः चालू करें' : 'Resume'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.stopBtn}
           onPress={onStop}
-          activeOpacity={0.8}
-          accessibilityLabel={isHi ? 'ऑडियो बंद करें' : 'Stop speech'}
+          activeOpacity={INTERACTION.pressOpacity}
+          accessibilityLabel={isHi ? 'ऑडियो बंद करें' : 'Stop speech prompt'}
           accessibilityRole="button"
+          hitSlop={ACCESSIBILITY.hitSlop}
         >
-          <View style={styles.stopIconSquare} />
-          <Text style={styles.stopBtnText}>{isHi ? 'बंद करें' : 'Stop'}</Text>
+          <Text style={styles.stopGlyph}>⏹</Text>
+          <Text style={[styles.stopBtnText, isHi && styles.btnTextHindi]}>
+            {isHi ? 'बंद करें' : 'Stop'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -119,12 +128,13 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
       <TouchableOpacity
         style={[styles.errorBtn, compact && styles.compactContainer, style]}
         onPress={onListen}
-        activeOpacity={0.85}
+        activeOpacity={INTERACTION.pressOpacity}
         accessibilityLabel={isHi ? 'ऑडियो पुनः प्रयास करें' : 'Retry audio playback'}
         accessibilityRole="button"
+        hitSlop={ACCESSIBILITY.hitSlop}
       >
         <Text style={styles.errorIcon}>⟳</Text>
-        <Text style={styles.errorBtnText}>
+        <Text style={[styles.errorBtnText, isHi && styles.btnTextHindi]}>
           {isHi ? 'पुनः प्रयास करें' : 'Retry Audio'}
         </Text>
       </TouchableOpacity>
@@ -136,12 +146,13 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
     <TouchableOpacity
       style={[styles.idleButton, compact && styles.compactButton, style]}
       onPress={onListen}
-      activeOpacity={0.8}
+      activeOpacity={INTERACTION.pressOpacity}
       accessibilityLabel={isHi ? 'नैदानिक प्रश्न सुनें' : 'Listen to clinical prompt'}
       accessibilityRole="button"
+      hitSlop={ACCESSIBILITY.hitSlop}
     >
-      <AudioWaveGlyph active={false} />
-      <Text style={styles.idleButtonText}>
+      <Text style={styles.speakerGlyph}>🔊</Text>
+      <Text style={[styles.idleButtonText, isHi && styles.btnTextHindi]}>
         {isHi ? 'प्रश्न सुनें' : 'Listen Prompt'}
       </Text>
     </TouchableOpacity>
@@ -150,140 +161,135 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
 
 const styles = StyleSheet.create({
   idleButton: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget, // 48dp
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     backgroundColor: ClinicalTheme.colors.primarySoft,
     borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.primaryAccent,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    borderColor: ClinicalTheme.colors.borderFocus,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
     alignSelf: 'flex-start',
   },
   compactButton: {
     minHeight: 44,
-    paddingHorizontal: 12,
+    paddingHorizontal: SPACING.md,
     paddingVertical: 8,
   },
   compactContainer: {
     minHeight: 44,
   },
+  speakerGlyph: {
+    fontSize: 16,
+  },
+  buttonGlyph: {
+    fontSize: 14,
+    color: ClinicalTheme.colors.primaryLight,
+  },
+  stopGlyph: {
+    fontSize: 13,
+    color: ClinicalTheme.colors.riskUrgent,
+  },
   idleButtonText: {
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '700',
     color: ClinicalTheme.colors.primaryLight,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   loadingButton: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
     borderWidth: 1.5,
     borderColor: ClinicalTheme.colors.borderMedium,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
     alignSelf: 'flex-start',
   },
   loadingText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
     color: ClinicalTheme.colors.textMuted,
   },
   activeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     alignSelf: 'flex-start',
   },
   pauseBtn: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     backgroundColor: ClinicalTheme.colors.secondarySoft,
     borderWidth: 1.5,
     borderColor: ClinicalTheme.colors.secondary,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  pauseIconBox: {
-    flexDirection: 'row',
-    gap: 3,
-    alignItems: 'center',
-  },
-  pauseBar: {
-    width: 3,
-    height: 14,
-    backgroundColor: ClinicalTheme.colors.secondary,
-    borderRadius: 1,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
   },
   pauseBtnText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     color: ClinicalTheme.colors.secondary,
   },
   resumeBtn: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     backgroundColor: ClinicalTheme.colors.primarySoft,
     borderWidth: 1.5,
     borderColor: ClinicalTheme.colors.primaryAccent,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  resumeIconTriangle: {
-    fontSize: 14,
-    color: ClinicalTheme.colors.primaryLight,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
   },
   resumeBtnText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     color: ClinicalTheme.colors.primaryLight,
   },
   stopBtn: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: ClinicalTheme.colors.surface,
+    gap: SPACING.sm,
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
     borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.borderMedium,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  stopIconSquare: {
-    width: 10,
-    height: 10,
-    backgroundColor: ClinicalTheme.colors.textMuted,
-    borderRadius: 1,
+    borderColor: ClinicalTheme.colors.riskUrgentBorder,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   stopBtnText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
-    color: ClinicalTheme.colors.textSecondary,
+    color: ClinicalTheme.colors.riskUrgent,
   },
   errorBtn: {
-    minHeight: 52,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    gap: SPACING.sm,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
     borderWidth: 1.5,
     borderColor: ClinicalTheme.colors.riskUrgent,
-    borderRadius: ClinicalTheme.radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
     alignSelf: 'flex-start',
   },
   errorIcon: {
@@ -293,21 +299,14 @@ const styles = StyleSheet.create({
   },
   errorBtnText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     color: ClinicalTheme.colors.riskUrgent,
   },
-  glyphContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-    height: 14,
+  btnTextHindi: {
+    lineHeight: 20,
   },
-  waveBar: {
-    width: 2.5,
-    backgroundColor: ClinicalTheme.colors.primaryAccent,
-    borderRadius: 1,
-  },
-  waveBarActive: {
-    backgroundColor: ClinicalTheme.colors.secondary,
+  textHindi: {
+    lineHeight: 20,
   },
 });

@@ -6,20 +6,39 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Image,
-  ActivityIndicator,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { ApiService } from '../services/api.service';
-import { Assessment, Patient } from '../types';
+import { Assessment, getPatientDisplayName, getPatientCodeDisplay } from '../types';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
+import { realtimeManager } from '../realtime';
+import {
+  ClinicalTheme,
+  SPACING,
+  RADIUS,
+  TOUCH_TARGETS,
+  ELEVATION,
+  INTERACTION,
+  useResponsiveLayout,
+} from '../theme';
+import { ClinicalHeader } from '../components/ClinicalHeader';
+import { PatientSummaryCard } from '../components/PatientSummaryCard';
+import { RiskBadge, StatusBadge } from '../components/ClinicalBadges';
+import { PrimaryButton, SecondaryButton } from '../components/ClinicalButtons';
+import { LoadingState } from '../components/ClinicalStates';
+import { getSymptomLabel } from '../i18n/symptomTranslations';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PhysicianReview'>;
 
 export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) => {
   const { assessmentId } = route.params;
+  const { t, language } = useLanguage();
+  const isHindi = language === 'hi';
+  const { isLandscape } = useResponsiveLayout();
 
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -42,7 +61,7 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
         setDoctorNote(data.doctor_note);
       }
     } catch (err: any) {
-      Alert.alert('Load Failed', err.message || 'Unable to load assessment record.');
+      Alert.alert(t('error'), err.message || t('assessmentNotFound', { id: assessmentId }));
     } finally {
       setLoading(false);
     }
@@ -53,8 +72,9 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
   }, [assessmentId]);
 
   const handleValidate = async () => {
+    if (submitting) return;
     if (!hasConfirmed) {
-      Alert.alert('Review Required', 'Please check the box confirming you have reviewed the patient findings.');
+      Alert.alert(t('reviewRequired'), t('reviewRequiredMsg'));
       return;
     }
 
@@ -62,17 +82,25 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
       setSubmitting(true);
       const res = await ApiService.validateAssessment(assessmentId, doctorNote);
       setAssessment(res.assessment);
-      Alert.alert('Assessment Validated', 'The assessment has been successfully marked as DOCTOR_VALIDATED.');
+
+      // Emit realtime event to synchronize dashboard counters and assessment history
+      realtimeManager.emit('ASSESSMENT_VALIDATED', res.assessment);
+
+      Alert.alert(
+        t('assessmentValidatedSuccess'),
+        t('assessmentValidatedSuccessMsg')
+      );
     } catch (err: any) {
-      Alert.alert('Validation Error', err.message || 'Failed to validate assessment.');
+      Alert.alert(t('validationError'), err.message || t('validationError'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleRequestReassessment = async () => {
+    if (submitting) return;
     if (!reassessReason.trim()) {
-      Alert.alert('Reason Required', 'Please provide a clinical reason for requesting reassessment.');
+      Alert.alert(t('reasonRequired'), t('reasonRequiredMsg'));
       return;
     }
 
@@ -82,9 +110,16 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
       setAssessment(res.assessment);
       setReassessModalVisible(false);
       setReassessReason('');
-      Alert.alert('Reassessment Requested', 'Assessment status updated to REASSESSMENT_REQUESTED.');
+
+      // Emit realtime event to synchronize dashboard and history
+      realtimeManager.emit('ASSESSMENT_REASSESSMENT', res.assessment);
+
+      Alert.alert(
+        t('reassessmentRequestedSuccess'),
+        t('reassessmentRequestedSuccessMsg')
+      );
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to request reassessment.');
+      Alert.alert(t('error'), err.message || t('error'));
     } finally {
       setSubmitting(false);
     }
@@ -92,291 +127,500 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
-        <Text style={{ color: '#94a3b8', marginTop: 12 }}>Loading clinical dossier for physician review...</Text>
+      <View style={styles.centerContainer}>
+        <LoadingState message={t('loadingAssessment')} />
       </View>
     );
   }
 
   if (!assessment) {
     return (
-      <View style={styles.center}>
-        <Text style={{ color: '#f87171', fontSize: 16 }}>Clinical assessment #{assessmentId} not found.</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Go Back</Text>
+      <View style={styles.centerContainer}>
+        <Text style={[styles.errorText, isHindi && styles.headingHindi]}>
+          {t('assessmentNotFound', { id: assessmentId })}
+        </Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('goBack')}
+        >
+          <Text style={[styles.backBtnText, isHindi && styles.labelHindi]}>
+            ← {t('goBack')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const patient = assessment.patient;
+  const patient = assessment.patient || assessment.patients;
+  const displayName = getPatientDisplayName(patient);
+  const patientCode = getPatientCodeDisplay(patient);
   const risk = assessment.risk_analysis;
   const status = assessment.status;
   const isPending = status === 'PENDING_DOCTOR_REVIEW' || status === 'COMPLETED';
   const isValidated = status === 'DOCTOR_VALIDATED';
   const isReassessment = status === 'REASSESSMENT_REQUESTED';
 
-  const tierColors: Record<string, { bg: string; border: string; text: string }> = {
-    Low: { bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', text: '#34d399' },
-    Moderate: { bg: 'rgba(245, 158, 11, 0.15)', border: '#f59e0b', text: '#fbbf24' },
-    High: { bg: 'rgba(249, 115, 22, 0.15)', border: '#f97316', text: '#fb923c' },
-    Urgent: { bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', text: '#f87171' },
+  const getTierDisplay = (tier?: string) => {
+    if (!tier) return t('unknownRiskTier');
+    switch (tier.toLowerCase()) {
+      case 'low':
+        return t('riskTierLow');
+      case 'moderate':
+        return t('riskTierModerate');
+      case 'high':
+        return t('riskTierHigh');
+      case 'urgent':
+        return t('riskTierUrgent');
+      default:
+        return tier.toUpperCase();
+    }
   };
-  const currentTier = risk?.tier || 'Low';
-  const theme = tierColors[currentTier] || tierColors.Low;
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleCol}>
-          <Text style={styles.headerTitle}>Physician Clinical Validation</Text>
-          <Text style={styles.headerSub}>
-            Patient: {patient?.name || 'Patient'} ({patient?.patient_code || 'ID'}) • Session #{assessment.id.slice(0, 8)}
-          </Text>
-        </View>
-      </View>
+  const getRiskVisual = (tier?: string) => {
+    const tLower = (tier || 'low').toLowerCase();
+    switch (tLower) {
+      case 'urgent':
+        return {
+          symbol: '⚠',
+          label: t('riskTierUrgent'),
+          color: ClinicalTheme.colors.riskUrgent,
+          bg: ClinicalTheme.colors.riskUrgentBg,
+          border: ClinicalTheme.colors.riskUrgentBorder,
+        };
+      case 'high':
+        return {
+          symbol: '!',
+          label: t('riskTierHigh'),
+          color: ClinicalTheme.colors.riskHigh,
+          bg: ClinicalTheme.colors.riskHighBg,
+          border: ClinicalTheme.colors.riskHighBorder,
+        };
+      case 'moderate':
+        return {
+          symbol: '●',
+          label: t('riskTierModerate'),
+          color: ClinicalTheme.colors.riskModerate,
+          bg: ClinicalTheme.colors.riskModerateBg,
+          border: ClinicalTheme.colors.riskModerateBorder,
+        };
+      case 'low':
+      default:
+        return {
+          symbol: '✓',
+          label: t('riskTierLow'),
+          color: ClinicalTheme.colors.riskLow,
+          bg: ClinicalTheme.colors.riskLowBg,
+          border: ClinicalTheme.colors.riskLowBorder,
+        };
+    }
+  };
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Status Notification Banner */}
-        {isValidated && (
-          <View style={styles.validatedBanner}>
-            <Text style={styles.bannerTitle}>✓ Assessment Validated</Text>
-            <Text style={styles.bannerMeta}>Reviewing Physician: {assessment.reviewed_by || 'Assigned Physician'}</Text>
-            {assessment.reviewed_at && (
-              <Text style={styles.bannerTime}>Timestamp: {new Date(assessment.reviewed_at).toLocaleString()}</Text>
-            )}
-            {assessment.doctor_note && (
-              <Text style={styles.bannerNote}>Doctor Note: {assessment.doctor_note}</Text>
-            )}
-          </View>
-        )}
+  const riskVisual = getRiskVisual(risk?.tier);
 
-        {isReassessment && (
-          <View style={styles.reassessmentBanner}>
-            <Text style={styles.bannerTitleAlert}>⚠️ Reassessment Requested</Text>
-            <Text style={styles.bannerReason}>Reason: {assessment.reassessment_reason}</Text>
-            <Text style={styles.bannerMeta}>Requested By: {assessment.reviewed_by || 'Assigned Physician'}</Text>
-            {assessment.reviewed_at && (
-              <Text style={styles.bannerTime}>Timestamp: {new Date(assessment.reviewed_at).toLocaleString()}</Text>
-            )}
-          </View>
-        )}
+  const getLocalizedOverrideRule = (ruleName?: string | null) => {
+    if (!ruleName) return '';
+    if (language === 'hi') {
+      if (ruleName.includes('Metastatic')) return t('overrideMetastaticPatternTitle');
+      if (ruleName.includes('Triad')) return t('overrideClassicTriadTitle');
+      if (ruleName.includes('Ulcerative') || ruleName.includes('Lesion')) return t('overrideUlcerativeLesionTitle');
+    }
+    return ruleName;
+  };
 
-        {isPending && (
-          <View style={styles.pendingBanner}>
-            <Text style={styles.pendingTitle}>⏳ Pending Doctor Review</Text>
-            <Text style={styles.pendingSub}>This assessment requires clinical review and sign-off by the attending physician.</Text>
-          </View>
-        )}
+  const getLocalizedOverrideReason = (reason?: string | null) => {
+    if (!reason) return '';
+    if (language === 'hi') {
+      if (reason.includes('Concomitant') || reason.includes('systemic staging')) {
+        return t('overrideMetastaticPatternReason');
+      }
+      if (reason.includes('Co-occurrence') || reason.includes('classic clinical cluster')) {
+        return t('overrideClassicTriadReason');
+      }
+      if (reason.includes('Ulcer') || reason.includes('tissue requires')) {
+        return t('overrideUlcerativeLesionReason');
+      }
+    }
+    return reason;
+  };
 
-        {/* Patient Demographics Card with Photo */}
-        <View style={styles.card}>
-          <View style={styles.patientRow}>
-            <View style={styles.photoContainer}>
-              {patient?.face_photo_url ? (
-                <Image source={{ uri: patient.face_photo_url }} style={styles.photo} />
-              ) : (
-                <View style={styles.placeholderPhoto}>
-                  <Text style={styles.placeholderText}>{patient?.name?.charAt(0) || 'P'}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.patientInfoCol}>
-              <Text style={styles.patientName}>{patient?.name || 'Patient Name'}</Text>
-              <Text style={styles.patientMetaText}>
-                Code: <Text style={styles.highlight}>{patient?.patient_code || '—'}</Text> • Age: {patient?.age || '—'} yrs • {patient?.gender || 'Female'}
+  const getLocalizedRecommendation = (rec?: string, tier?: string) => {
+    if (language === 'hi') {
+      const tr = tier?.toLowerCase() || risk?.tier?.toLowerCase();
+      if (tr === 'urgent') return t('recommendationUrgent');
+      if (tr === 'high') return t('recommendationHigh');
+      if (tr === 'moderate') return t('recommendationModerate');
+      if (tr === 'low') return t('recommendationLow');
+    }
+    return rec || '';
+  };
+
+  // Left Column Content: Patient Dossier, Risk Analysis Hero, Complete Findings List
+  const renderLeftColumn = () => (
+    <View style={isLandscape ? styles.leftCol : styles.fullWidthCol}>
+      {/* Patient Dossier Card */}
+      <PatientSummaryCard
+        patient={patient || {}}
+        extraBadge={<StatusBadge status={status} />}
+      />
+
+      {/* Assessed Risk Tier Hero Banner */}
+      <View
+        style={[
+          styles.riskHeroCard,
+          { borderColor: riskVisual.border, backgroundColor: riskVisual.bg },
+        ]}
+      >
+        <View style={styles.riskTopRow}>
+          <View style={styles.riskHeadingCol}>
+            <Text style={[styles.riskHeroCaption, isHindi && styles.captionHindi]}>
+              {t('clinicalRiskStratification')}
+            </Text>
+            <View style={styles.riskBadgeTitleRow}>
+              <View
+                style={[
+                  styles.riskSymbolPill,
+                  { backgroundColor: riskVisual.color },
+                ]}
+              >
+                <Text style={styles.riskSymbolText}>{riskVisual.symbol}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.riskHeroTitle,
+                  { color: riskVisual.color },
+                  isHindi && styles.titleHindi,
+                ]}
+              >
+                {t('riskTierHeading', { tier: getTierDisplay(risk?.tier) })}
               </Text>
-              {patient?.phone ? (
-                <Text style={styles.patientPhone}>Phone: {patient.phone}</Text>
-              ) : null}
-              <Text style={styles.sessionDate}>
-                Screening Date: {new Date(assessment.started_at).toLocaleString()}
-              </Text>
             </View>
           </View>
+          {risk?.tier ? <RiskBadge tier={risk.tier} size="lg" /> : null}
         </View>
 
-        {/* Clinical Risk Summary Card */}
-        <View style={[styles.card, { borderColor: theme.border }]}>
-          <View style={[styles.tierHeader, { backgroundColor: theme.bg }]}>
-            <Text style={styles.tierSub}>ASSESSED CLINICAL RISK TIER</Text>
-            <Text style={[styles.tierTitle, { color: theme.text }]}>
-              {currentTier.toUpperCase()} RISK ({risk?.totalScore ?? 0} pts)
+        <View style={styles.scoreRow}>
+          <View style={styles.scoreBox}>
+            <Text style={styles.scoreVal}>{risk?.totalScore ?? '—'}</Text>
+            <Text style={[styles.scoreLabel, isHindi && styles.labelHindi]}>
+              {t('clinicalRiskScore')}
             </Text>
           </View>
-
-          {risk?.override?.triggered && (
-            <View style={styles.overrideBox}>
-              <Text style={styles.overrideTitle}>🚨 Clinical Safety Override: {risk.override.ruleName}</Text>
-              <Text style={styles.overrideReason}>{risk.override.reason}</Text>
-            </View>
-          )}
-
-          <View style={styles.recommendationBox}>
-            <Text style={styles.boxTitle}>Physician Action Recommendation</Text>
-            <Text style={styles.recommendationText}>{risk?.recommendation || 'Evaluation complete.'}</Text>
-            {risk?.interpretation ? (
-              <Text style={styles.interpretationText}>{risk.interpretation}</Text>
-            ) : null}
+          <View style={styles.scoreBox}>
+            <Text style={styles.scoreVal}>+{risk?.brm?.score ?? '0'}</Text>
+            <Text style={[styles.scoreLabel, isHindi && styles.labelHindi]}>
+              {t('baselineRiskBRM')}
+            </Text>
           </View>
-
-          {/* Phase 0-3 Grid */}
-          <Text style={[styles.boxTitle, { marginTop: 12 }]}>Multi-Phase Scoring Breakdown</Text>
-          <View style={styles.phaseGrid}>
-            <View style={styles.phaseCol}>
-              <Text style={styles.phaseLabel}>Phase 0 (BRM)</Text>
-              <Text style={styles.phaseScore}>+{risk?.brm?.score ?? 0} pts</Text>
-              <Text style={styles.phaseHint}>Baseline Risk</Text>
-            </View>
-            <View style={styles.phaseCol}>
-              <Text style={styles.phaseLabel}>Phase 1 (Primary)</Text>
-              <Text style={styles.phaseScore}>{risk?.symptomScoring?.phase1Weighted ?? 0} pts</Text>
-              <Text style={styles.phaseHint}>{risk?.symptomScoring?.positiveCountPhase1 ?? 0} pos findings</Text>
-            </View>
-            <View style={styles.phaseCol}>
-              <Text style={styles.phaseLabel}>Phase 2 (Regional)</Text>
-              <Text style={styles.phaseScore}>{risk?.symptomScoring?.phase2Weighted ?? 0} pts</Text>
-              <Text style={styles.phaseHint}>{risk?.symptomScoring?.positiveCountPhase2 ?? 0} pos findings</Text>
-            </View>
-            <View style={styles.phaseCol}>
-              <Text style={styles.phaseLabel}>Phase 3 (Systemic)</Text>
-              <Text style={styles.phaseScore}>{risk?.symptomScoring?.phase3Weighted ?? 0} pts</Text>
-              <Text style={styles.phaseHint}>{risk?.symptomScoring?.positiveCountPhase3 ?? 0} pos findings</Text>
-            </View>
+          <View style={styles.scoreBox}>
+            <Text style={styles.scoreVal}>{assessment.answers?.length ?? 0}</Text>
+            <Text style={[styles.scoreLabel, isHindi && styles.labelHindi]}>
+              {t('recordedResponses')}
+            </Text>
           </View>
         </View>
 
-        {/* Complete Questionnaire Responses */}
-        <View style={styles.card}>
-          <Text style={styles.boxTitle}>
-            Questionnaire Responses Transcript ({assessment.answers?.length || 0})
+        {risk?.override?.triggered ? (
+          <View style={styles.overrideAlert}>
+            <View style={styles.overrideAlertHeader}>
+              <Text style={styles.overrideAlertIcon}>⚠</Text>
+              <Text style={[styles.overrideAlertTitle, isHindi && styles.boldHindi]}>
+                {t('safetyEscalationOverride')} {getLocalizedOverrideRule(risk.override.ruleName)}
+              </Text>
+            </View>
+            <Text style={[styles.overrideAlertDesc, isHindi && styles.bodyHindi]}>
+              {getLocalizedOverrideReason(risk.override.reason)}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.standardClearanceBox}>
+            <Text style={styles.standardClearanceIcon}>✓</Text>
+            <Text style={[styles.standardClearanceText, isHindi && styles.labelHindi]}>
+              {t('safetyEscalations')}: {t('noOverrideTriggered')}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Complete Recorded Clinical Findings */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionTitleRow}>
+          <Text style={[styles.sectionTitle, isHindi && styles.headingHindi]}>
+            {t('completeClinicalFindings')}
           </Text>
-          {(!assessment.answers || assessment.answers.length === 0) ? (
-            <Text style={styles.emptyAnswersText}>No individual questions recorded for this session.</Text>
-          ) : (
-            assessment.answers.map((ans, idx) => {
-              const isYes = ans.answer?.trim().toLowerCase() === 'yes';
+          <View style={styles.findingCountPill}>
+            <Text style={styles.findingCountText}>
+              {assessment.answers?.length ?? 0}
+            </Text>
+          </View>
+        </View>
+
+        {assessment.answers && assessment.answers.length > 0 ? (
+          <View style={styles.answersList}>
+            {assessment.answers.map((ans, idx) => {
+              const isYes = ans.answer === 'Yes';
+              const localizedQuestion = getSymptomLabel(
+                ans.question_id || ans.question,
+                ans.question,
+                language
+              );
               return (
-                <View key={ans.id || idx} style={styles.answerRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.questionText}>
-                      <Text style={styles.idxText}>#{idx + 1} </Text>
-                      {ans.question}
+                <View
+                  key={idx}
+                  style={[styles.answerRow, isYes && styles.answerRowYes]}
+                >
+                  <View style={styles.answerTextCol}>
+                    <Text style={[styles.answerQuestion, isHindi && styles.bodyHindi]}>
+                      {localizedQuestion}
+                    </Text>
+                    <Text style={styles.answerCode}>
+                      {(ans.question_id || 'CLINICAL-Q').toUpperCase()}
                     </Text>
                   </View>
-                  <View style={[styles.answerBadge, isYes ? styles.yesBadge : styles.noBadge]}>
-                    <Text style={[styles.answerBadgeText, isYes ? styles.yesBadgeText : styles.noBadgeText]}>
-                      {ans.answer}
+                  <View
+                    style={[
+                      styles.answerBadge,
+                      isYes ? styles.answerBadgeYes : styles.answerBadgeNo,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.answerBadgeText,
+                        isYes ? styles.answerBadgeTextYes : styles.answerBadgeTextNo,
+                        isHindi && styles.captionHindi,
+                      ]}
+                    >
+                      {isYes ? `✓ ${t('yes')}` : t('no')}
                     </Text>
                   </View>
                 </View>
               );
-            })
-          )}
+            })}
+          </View>
+        ) : (
+          <Text style={[styles.noAnswersText, isHindi && styles.bodyHindi]}>
+            {t('noIndividualAnswers')}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+
+  // Right Column Content: Status, Recommendations, Notes, Sign-Off Controls
+  const renderRightColumn = () => (
+    <View style={isLandscape ? styles.rightCol : styles.fullWidthCol}>
+      {/* Assessment Review Status Card */}
+      <View style={styles.workstationCard}>
+        <View style={styles.workstationHeader}>
+          <Text style={[styles.workstationCaption, isHindi && styles.captionHindi]}>
+            {t('reviewStatus')}
+          </Text>
+          <StatusBadge status={status} />
         </View>
 
-        {/* Physician Review Action Section */}
-        <View style={styles.reviewActionCard}>
-          <Text style={styles.reviewActionHeader}>Clinical Review & Physician Action</Text>
-          <Text style={styles.reviewActionSub}>
-            Document clinical observations and formally sign off on or request re-assessment.
-          </Text>
-
-          <Text style={styles.inputLabel}>Doctor Clinical Note (Optional):</Text>
-          <TextInput
-            style={styles.textArea}
-            multiline
-            numberOfLines={4}
-            placeholder="Add clinical observations, on-site breast exam notes, or biopsy referral directives..."
-            placeholderTextColor="#64748b"
-            value={doctorNote}
-            onChangeText={setDoctorNote}
-            editable={!submitting}
-          />
-
-          {/* Checkbox for confirmation */}
-          <TouchableOpacity
-            style={styles.checkboxRow}
-            onPress={() => setHasConfirmed(!hasConfirmed)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.checkboxBox, hasConfirmed && styles.checkboxBoxChecked]}>
-              {hasConfirmed && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>
-              I have reviewed the patient's assessment and clinical findings.
+        <View style={styles.statusMetaBox}>
+          <View style={styles.statusMetaRow}>
+            <Text style={[styles.statusMetaLabel, isHindi && styles.labelHindi]}>
+              {t('date')}
             </Text>
-          </TouchableOpacity>
-
-          {/* Action Buttons */}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.validateBtn, (!hasConfirmed || submitting) && styles.btnDisabled]}
-              onPress={handleValidate}
-              disabled={!hasConfirmed || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.validateBtnText}>✓ Validate Assessment</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.reassessBtn, submitting && styles.btnDisabled]}
-              onPress={() => setReassessModalVisible(true)}
-              disabled={submitting}
-            >
-              <Text style={styles.reassessBtnText}>Request Reassessment</Text>
-            </TouchableOpacity>
+            <Text style={styles.statusMetaValue}>
+              {assessment.completed_at
+                ? new Date(assessment.completed_at).toLocaleDateString()
+                : assessment.started_at
+                ? new Date(assessment.started_at).toLocaleDateString()
+                : '—'}
+            </Text>
           </View>
+          <View style={styles.statusMetaRow}>
+            <Text style={[styles.statusMetaLabel, isHindi && styles.labelHindi]}>
+              {t('physician')}
+            </Text>
+            <Text style={styles.statusMetaValue}>
+              {assessment.reviewed_by || t('physician')}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Physician Recommendation Card */}
+      {risk?.recommendation ? (
+        <View style={styles.workstationCard}>
+          <Text style={[styles.sectionTitle, isHindi && styles.headingHindi]}>
+            {t('physicianRecommendation')}
+          </Text>
+          <View style={styles.recBox}>
+            <Text style={[styles.recommendationText, isHindi && styles.boldHindi]}>
+              {getLocalizedRecommendation(risk.recommendation, risk.tier)}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* Physician Sign-Off & Clinical Notes Card */}
+      <View style={styles.workstationCard}>
+        <Text style={[styles.sectionTitle, isHindi && styles.headingHindi]}>
+          {t('physicianReviewNotes')}
+        </Text>
+        <Text style={[styles.sectionSub, isHindi && styles.captionHindi]}>
+          {t('physicianReviewNotesSub')}
+        </Text>
+
+        <TextInput
+          style={[styles.noteInput, isValidated && styles.noteInputDisabled]}
+          value={doctorNote}
+          onChangeText={setDoctorNote}
+          placeholder={t('enterPhysicianNotesPlaceholder')}
+          placeholderTextColor={ClinicalTheme.colors.textLight}
+          multiline
+          numberOfLines={4}
+          editable={!isValidated && !submitting}
+          accessibilityLabel={t('clinicalNotesLabel')}
+        />
+
+        {isValidated ? (
+          <View style={styles.validatedNotice}>
+            <Text style={styles.validatedNoticeIcon}>✓</Text>
+            <Text style={[styles.validatedNoticeText, isHindi && styles.boldHindi]}>
+              {t('signedAndValidatedBy', {
+                doctor: assessment.reviewed_by || t('physician'),
+                date: assessment.reviewed_at
+                  ? new Date(assessment.reviewed_at).toLocaleDateString()
+                  : (language === 'hi' ? 'रिकॉर्ड' : 'Record'),
+              })}
+            </Text>
+          </View>
+        ) : isReassessment ? (
+          <View style={styles.reassessmentNotice}>
+            <Text style={[styles.reassessmentNoticeTitle, isHindi && styles.boldHindi]}>
+              ⚠ {t('reassessmentRequestedTitle')}
+            </Text>
+            <Text style={[styles.reassessmentNoticeReason, isHindi && styles.bodyHindi]}>
+              {t('reasonLabel')} {assessment.reassessment_reason || 'Re-evaluation required.'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.reviewActionArea}>
+            <TouchableOpacity
+              style={[
+                styles.confirmCheckRow,
+                hasConfirmed && styles.confirmCheckRowActive,
+              ]}
+              onPress={() => setHasConfirmed(!hasConfirmed)}
+              activeOpacity={INTERACTION.pressOpacity}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: hasConfirmed }}
+              accessibilityLabel={t('confirmReviewCheckbox')}
+            >
+              <View
+                style={[
+                  styles.confirmCheckBox,
+                  hasConfirmed && styles.confirmCheckBoxActive,
+                ]}
+              >
+                {hasConfirmed && <Text style={styles.confirmCheckmark}>✓</Text>}
+              </View>
+              <Text style={[styles.confirmCheckLabel, isHindi && styles.labelHindi]}>
+                {t('confirmReviewCheckbox')}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.actionButtonsCol}>
+              <PrimaryButton
+                title={
+                  submitting
+                    ? t('validating')
+                    : t('validateAssessment')
+                }
+                onPress={handleValidate}
+                loading={submitting}
+                disabled={!hasConfirmed || submitting}
+                style={styles.validateBtn}
+              />
+
+              <SecondaryButton
+                title={t('requestReassessment')}
+                onPress={() => setReassessModalVisible(true)}
+                disabled={submitting}
+                style={styles.reassessBtn}
+              />
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <ClinicalHeader
+        title={t('physicianReviewAndSignoff')}
+        subtitle={`${displayName} • ${patientCode}`}
+        onBack={() => navigation.goBack()}
+        backLabel={t('backToDashboard')}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.contentWrap, isLandscape && styles.contentWrapLandscape]}>
+          {renderLeftColumn()}
+          {renderRightColumn()}
         </View>
       </ScrollView>
 
-      {/* Reassessment Reason Modal */}
+      {/* Reassessment Modal */}
       <Modal
         visible={reassessModalVisible}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setReassessModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Request Reassessment</Text>
-            <Text style={styles.modalSub}>
-              Please specify the clinical reason for requesting a reassessment of this patient.
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={[styles.modalTitle, isHindi && styles.headingHindi]}>
+              {t('requestClinicalReassessmentModalTitle')}
+            </Text>
+            <Text style={[styles.modalSubtitle, isHindi && styles.bodyHindi]}>
+              {t('requestClinicalReassessmentModalSub')}
             </Text>
 
             <TextInput
-              style={styles.modalTextArea}
-              multiline
-              numberOfLines={3}
-              placeholder="E.g., Inconsistent symptom reported during physical exam; requires repeat Phase 1 screening..."
-              placeholderTextColor="#64748b"
+              style={styles.modalInput}
               value={reassessReason}
               onChangeText={setReassessReason}
-              autoFocus
+              placeholder={t('enterReassessmentReasonPlaceholder')}
+              placeholderTextColor={ClinicalTheme.colors.textLight}
+              multiline
+              numberOfLines={3}
+              editable={!submitting}
+              accessibilityLabel={t('reassessmentReasonPlaceholder')}
             />
 
-            <View style={styles.modalBtnRow}>
+            <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
                 onPress={() => setReassessModalVisible(false)}
+                disabled={submitting}
+                accessibilityRole="button"
+                accessibilityLabel={t('cancel')}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelBtnText, isHindi && styles.labelHindi]}>
+                  {t('cancel')}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalConfirmBtn, !reassessReason.trim() && styles.btnDisabled]}
+                style={[
+                  styles.modalConfirmBtn,
+                  submitting && styles.modalConfirmBtnDisabled,
+                ]}
                 onPress={handleRequestReassessment}
-                disabled={!reassessReason.trim() || submitting}
+                disabled={submitting}
+                accessibilityRole="button"
+                accessibilityLabel={t('submitRequest')}
               >
-                <Text style={styles.modalConfirmText}>Submit Request</Text>
+                <Text style={[styles.modalConfirmBtnText, isHindi && styles.labelHindi]}>
+                  {t('submitRequest')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -389,481 +633,555 @@ export const PhysicianReviewScreen: React.FC<Props> = ({ route, navigation }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: ClinicalTheme.colors.background,
   },
-  center: {
+  centerContainer: {
     flex: 1,
+    backgroundColor: ClinicalTheme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
-    padding: 24,
+    padding: SPACING.xl,
   },
-  header: {
-    backgroundColor: '#1e293b',
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    gap: 12,
-  },
-  backBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#334155',
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#38bdf8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  headerTitleCol: {
-    flex: 1,
-  },
-  headerTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  headerSub: {
-    color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
-  },
-  validatedBanner: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: '#10b981',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-  },
-  reassessmentBanner: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: '#f59e0b',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-  },
-  pendingBanner: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderColor: '#0284c7',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-  },
-  bannerTitle: {
-    color: '#34d399',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  bannerTitleAlert: {
-    color: '#fbbf24',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  pendingTitle: {
-    color: '#38bdf8',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  pendingSub: {
-    color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  bannerMeta: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  bannerTime: {
-    color: '#94a3b8',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  bannerNote: {
-    color: '#e2e8f0',
-    fontSize: 12,
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  bannerReason: {
-    color: '#fef08a',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  patientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  photoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#475569',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderPhoto: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    color: '#38bdf8',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  patientInfoCol: {
-    flex: 1,
-  },
-  patientName: {
-    color: '#f8fafc',
+  errorText: {
+    color: ClinicalTheme.colors.riskUrgent,
     fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
   },
-  patientMetaText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  highlight: {
-    color: '#38bdf8',
-    fontWeight: '600',
-  },
-  patientPhone: {
-    color: '#94a3b8',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  sessionDate: {
-    color: '#64748b',
-    fontSize: 11,
-    marginTop: 3,
-  },
-  tierHeader: {
-    padding: 12,
-    borderRadius: 8,
+  backBtn: {
+    marginTop: SPACING.lg,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  tierSub: {
-    fontSize: 11,
-    color: '#cbd5e1',
+  backBtnText: {
+    color: ClinicalTheme.colors.primaryAccent,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 14,
   },
-  tierTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 2,
+  scrollContent: {
+    padding: SPACING.xl,
+    paddingBottom: 64,
+    alignItems: 'center',
   },
-  overrideBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: '#ef4444',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+  contentWrap: {
+    width: '100%',
+    maxWidth: 1240,
+    gap: SPACING.lg,
   },
-  overrideTitle: {
-    color: '#f87171',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  overrideReason: {
-    color: '#fca5a5',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  recommendationBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  boxTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  recommendationText: {
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  interpretationText: {
-    color: '#94a3b8',
-    fontSize: 11,
-    marginTop: 6,
-    lineHeight: 16,
-  },
-  phaseGrid: {
+  contentWrapLandscape: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
+    alignItems: 'flex-start',
+    gap: SPACING.xl,
   },
-  phaseCol: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 8,
+  leftCol: {
+    flex: 1.65, // ~62-65%
+    gap: SPACING.lg,
+  },
+  rightCol: {
+    flex: 1, // ~35-38%
+    gap: SPACING.lg,
+  },
+  fullWidthCol: {
+    width: '100%',
+    gap: SPACING.lg,
+  },
+  riskHeroCard: {
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 2,
+    ...ClinicalTheme.shadows.card,
+  },
+  riskTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: ClinicalTheme.colors.borderDefault,
+  },
+  riskHeadingCol: {
+    flex: 1,
+  },
+  riskHeroCaption: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  riskBadgeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: 4,
+  },
+  riskSymbolPill: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  riskSymbolText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: ClinicalTheme.colors.textWhite,
+  },
+  riskHeroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  scoreBox: {
+    flex: 1,
+    backgroundColor: ClinicalTheme.colors.surface,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: ClinicalTheme.colors.borderDefault,
+    alignItems: 'center',
   },
-  phaseLabel: {
-    color: '#94a3b8',
-    fontSize: 10,
+  scoreVal: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textPrimary,
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: ClinicalTheme.colors.textMuted,
     fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
-  phaseScore: {
-    color: '#f8fafc',
+  overrideAlert: {
+    marginTop: SPACING.lg,
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.riskUrgentBorder,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+  },
+  overrideAlertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  overrideAlertIcon: {
+    fontSize: 16,
+    color: ClinicalTheme.colors.riskUrgent,
+  },
+  overrideAlertTitle: {
     fontSize: 14,
     fontWeight: '800',
-    marginTop: 2,
+    color: ClinicalTheme.colors.riskUrgent,
+    flex: 1,
   },
-  phaseHint: {
-    color: '#64748b',
-    fontSize: 9,
-    marginTop: 2,
+  overrideAlertDesc: {
+    fontSize: 13,
+    color: ClinicalTheme.colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 18,
   },
-  emptyAnswersText: {
-    color: '#64748b',
+  standardClearanceBox: {
+    marginTop: SPACING.md,
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  standardClearanceIcon: {
+    fontSize: 14,
+    color: ClinicalTheme.colors.riskLow,
+    fontWeight: '800',
+  },
+  standardClearanceText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ClinicalTheme.colors.textSecondary,
+  },
+  sectionCard: {
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    ...ClinicalTheme.shadows.card,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textPrimary,
+    letterSpacing: -0.2,
+    marginBottom: SPACING.xs,
+  },
+  sectionSub: {
+    fontSize: 13,
+    color: ClinicalTheme.colors.textMuted,
+    marginBottom: SPACING.md,
+  },
+  findingCountPill: {
+    backgroundColor: ClinicalTheme.colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.primaryAccent,
+  },
+  findingCountText: {
     fontSize: 12,
-    fontStyle: 'italic',
+    fontWeight: '800',
+    color: ClinicalTheme.colors.primaryLight,
+  },
+  answersList: {
+    gap: 8,
+    marginTop: SPACING.sm,
   },
   answerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.borderDefault,
   },
-  idxText: {
-    color: '#64748b',
+  answerRowYes: {
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
+    borderColor: ClinicalTheme.colors.riskUrgentBorder,
+  },
+  answerTextCol: {
+    flex: 1,
+    paddingRight: SPACING.md,
+  },
+  answerQuestion: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ClinicalTheme.colors.textPrimary,
+    lineHeight: 20,
+  },
+  answerCode: {
     fontSize: 11,
-  },
-  questionText: {
-    color: '#e2e8f0',
-    fontSize: 12,
+    color: ClinicalTheme.colors.textMuted,
+    marginTop: 2,
+    fontWeight: '700',
   },
   answerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  yesBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
-    borderColor: '#ef4444',
   },
-  noBadge: {
-    backgroundColor: '#334155',
+  answerBadgeYes: {
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
+    borderColor: ClinicalTheme.colors.riskUrgent,
+  },
+  answerBadgeNo: {
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderColor: ClinicalTheme.colors.borderMedium,
   },
   answerBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  yesBadgeText: {
-    color: '#f87171',
-  },
-  noBadgeText: {
-    color: '#cbd5e1',
-  },
-  reviewActionCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#0284c7',
-  },
-  reviewActionHeader: {
-    color: '#38bdf8',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  reviewActionSub: {
-    color: '#94a3b8',
     fontSize: 12,
-    marginTop: 2,
-    marginBottom: 12,
+    fontWeight: '800',
   },
-  inputLabel: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
+  answerBadgeTextYes: {
+    color: ClinicalTheme.colors.riskUrgent,
   },
-  textArea: {
-    backgroundColor: '#0f172a',
+  answerBadgeTextNo: {
+    color: ClinicalTheme.colors.textMuted,
+  },
+  noAnswersText: {
+    color: ClinicalTheme.colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  workstationCard: {
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    padding: 10,
-    color: '#f8fafc',
-    fontSize: 13,
-    textAlignVertical: 'top',
-    minHeight: 80,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    ...ClinicalTheme.shadows.card,
   },
-  checkboxRow: {
+  workstationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 14,
-    gap: 10,
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: ClinicalTheme.colors.borderDefault,
   },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+  workstationCaption: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  statusMetaBox: {
+    backgroundColor: ClinicalTheme.colors.bgMuted,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.borderDefault,
+  },
+  statusMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusMetaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ClinicalTheme.colors.textMuted,
+  },
+  statusMetaValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: ClinicalTheme.colors.textPrimary,
+  },
+  recBox: {
+    backgroundColor: ClinicalTheme.colors.primarySoft,
+    borderLeftWidth: 4,
+    borderLeftColor: ClinicalTheme.colors.primaryAccent,
+    padding: SPACING.md,
+    borderRadius: RADIUS.xs,
+    marginTop: SPACING.xs,
+  },
+  recommendationText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: ClinicalTheme.colors.primaryLight,
+    lineHeight: 21,
+  },
+  noteInput: {
+    backgroundColor: ClinicalTheme.colors.bgMuted,
+    borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    borderColor: '#64748b',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
+    borderColor: ClinicalTheme.colors.borderMedium,
+    padding: SPACING.md,
+    fontSize: 14,
+    color: ClinicalTheme.colors.textPrimary,
+    minHeight: 110,
+    textAlignVertical: 'top',
+    marginBottom: SPACING.md,
   },
-  checkboxBoxChecked: {
-    backgroundColor: '#0284c7',
-    borderColor: '#38bdf8',
+  noteInputDisabled: {
+    backgroundColor: ClinicalTheme.colors.surfaceMuted,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    color: ClinicalTheme.colors.textSecondary,
   },
-  checkmark: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    color: '#f8fafc',
-    fontSize: 13,
-    flex: 1,
-  },
-  buttonRow: {
+  validatedNotice: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    backgroundColor: ClinicalTheme.colors.riskLowBg,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.riskLowBorder,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
   },
-  validateBtn: {
-    flex: 1,
-    backgroundColor: '#0284c7',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  validatedNoticeIcon: {
+    fontSize: 18,
+    color: ClinicalTheme.colors.riskLow,
+    fontWeight: '900',
   },
-  validateBtnText: {
-    color: '#ffffff',
+  validatedNoticeText: {
+    color: ClinicalTheme.colors.riskLow,
     fontSize: 13,
     fontWeight: '700',
-  },
-  reassessBtn: {
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reassessBtnText: {
-    color: '#fbbf24',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  btnDisabled: {
-    opacity: 0.45,
-  },
-  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    lineHeight: 18,
   },
-  modalContent: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 20,
-    width: '100%',
-    maxWidth: 480,
-    borderWidth: 1,
-    borderColor: '#475569',
+  reassessmentNotice: {
+    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.riskUrgentBorder,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
   },
-  modalTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '700',
+  reassessmentNoticeTitle: {
+    color: ClinicalTheme.colors.riskUrgent,
+    fontSize: 13,
+    fontWeight: '800',
   },
-  modalSub: {
-    color: '#94a3b8',
+  reassessmentNoticeReason: {
+    color: ClinicalTheme.colors.textSecondary,
     fontSize: 12,
     marginTop: 4,
-    marginBottom: 12,
+    lineHeight: 17,
   },
-  modalTextArea: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    padding: 10,
-    color: '#f8fafc',
-    fontSize: 13,
-    textAlignVertical: 'top',
-    minHeight: 70,
+  reviewActionArea: {
+    gap: SPACING.md,
   },
-  modalBtnRow: {
+  confirmCheckRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-    gap: 10,
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: ClinicalTheme.colors.bgMuted,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
+  },
+  confirmCheckRowActive: {
+    backgroundColor: ClinicalTheme.colors.primarySoft,
+    borderColor: ClinicalTheme.colors.primaryAccent,
+  },
+  confirmCheckBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: ClinicalTheme.colors.surface,
+  },
+  confirmCheckBoxActive: {
+    backgroundColor: ClinicalTheme.colors.primaryAccent,
+    borderColor: ClinicalTheme.colors.primaryAccent,
+  },
+  confirmCheckmark: {
+    color: ClinicalTheme.colors.textWhite,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  confirmCheckLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: ClinicalTheme.colors.textSecondary,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  actionButtonsCol: {
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  validateBtn: {
+    minHeight: TOUCH_TARGETS.primaryAction, // 60dp
+  },
+  reassessBtn: {
+    minHeight: TOUCH_TARGETS.secondaryAction, // 56dp
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: ClinicalTheme.colors.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: ClinicalTheme.colors.borderDefault,
+    ...ClinicalTheme.shadows.elevated,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: ClinicalTheme.colors.textPrimary,
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: ClinicalTheme.colors.textMuted,
+    lineHeight: 18,
+    marginBottom: SPACING.md,
+  },
+  modalInput: {
+    backgroundColor: ClinicalTheme.colors.bgMuted,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    fontSize: 14,
+    color: ClinicalTheme.colors.textPrimary,
+    minHeight: 90,
+    textAlignVertical: 'top',
+    marginBottom: SPACING.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: SPACING.md,
   },
   modalCancelBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-    backgroundColor: '#334155',
+    flex: 1,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
+    borderWidth: 1.5,
+    borderColor: ClinicalTheme.colors.borderMedium,
+    borderRadius: RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: ClinicalTheme.colors.surface,
   },
-  modalCancelText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '600',
+  modalCancelBtnText: {
+    color: ClinicalTheme.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
   },
   modalConfirmBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 8,
-    backgroundColor: '#f59e0b',
+    flex: 1.3,
+    minHeight: TOUCH_TARGETS.minTouchTarget,
+    backgroundColor: ClinicalTheme.colors.riskUrgent,
+    borderRadius: RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalConfirmText: {
-    color: '#0f172a',
-    fontSize: 13,
+  modalConfirmBtnDisabled: {
+    opacity: 0.6,
+  },
+  modalConfirmBtnText: {
+    color: ClinicalTheme.colors.textWhite,
+    fontSize: 14,
     fontWeight: '700',
+  },
+  captionHindi: {
+    lineHeight: 18,
+  },
+  titleHindi: {
+    lineHeight: 32,
+  },
+  labelHindi: {
+    lineHeight: 18,
+  },
+  bodyHindi: {
+    lineHeight: 20,
+  },
+  headingHindi: {
+    lineHeight: 26,
+  },
+  boldHindi: {
+    lineHeight: 22,
   },
 });

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, Lock, Mail, ShieldCheck, Stethoscope, Hospital } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { adminApi, getApiUrl } from '../../lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -18,20 +18,34 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      // In development/demo mode use admin token
-      const token = email.includes('admin') ? 'demo-admin-token' : `mock:ADMIN:${email}:${email}:Admin`;
+      const token = password.trim().startsWith('Bearer ')
+        ? password.trim().replace(/^Bearer\s+/i, '')
+        : password.trim();
+
+      const res = await fetch(`${getApiUrl()}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Authentication failed: Invalid credentials or unverified admin token.');
+      }
+
+      const data = await res.json();
+      if (data.role !== 'ADMIN') {
+        throw new Error('Forbidden: Account does not have administrator privileges.');
+      }
+
       adminApi.setAuthToken(token);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'Authentication failed. Please verify credentials.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoAdmin = () => {
-    adminApi.setAuthToken('demo-admin-token');
-    router.push('/dashboard');
   };
 
   return (
@@ -43,9 +57,9 @@ export default function AdminLoginPage() {
           <div className="w-14 h-14 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-700 mb-3.5 shadow-sm">
             <Activity className="w-7 h-7" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">BreastCare AI</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">NariSetu Admin</h1>
           <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider mt-0.5">
-            Breast Health Clinical Management System
+            NariSetu – BreastCare AI Clinical Platform
           </p>
           <p className="text-xs text-slate-500 mt-1">
             Clinical Administration & Screening Portal
@@ -102,24 +116,6 @@ export default function AdminLoginPage() {
             {loading ? 'Authenticating Staff...' : 'Sign In to Clinical Portal'}
           </button>
         </form>
-
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
-          </div>
-          <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-            <span className="bg-white px-3 text-slate-400 font-semibold">Authorized Direct Access</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleDemoAdmin}
-          className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <ShieldCheck className="w-4 h-4 text-sky-700" />
-          Authorize as Hospital Administrator (Quick Access)
-        </button>
 
         <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">
           <Hospital className="w-3.5 h-3.5 text-slate-400" />

@@ -3,8 +3,11 @@ const assert = require('node:assert/strict');
 const http = require('http');
 const app = require('../server');
 
+const repo = require('../db/repository');
+
 let server;
 let baseUrl;
+let createdPatientId = null;
 
 test.before(async () => {
   server = http.createServer(app);
@@ -14,6 +17,11 @@ test.before(async () => {
 });
 
 test.after(async () => {
+  if (createdPatientId) {
+    try {
+      await repo.deletePatient(createdPatientId);
+    } catch (_) {}
+  }
   await new Promise((resolve) => server.close(resolve));
 });
 
@@ -32,7 +40,7 @@ test('Complete Data Flow: Doctor triage -> Photo -> Questionnaire -> Submit -> A
   const testPatientCode = `PT-TRIAGE-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
   const patientPayload = {
     patient_code: testPatientCode,
-    name: 'Lakshmi Bai',
+    name: 'Test Patient Beta',
     age: 51,
     gender: 'Female',
     phone: '+91 94000 11223'
@@ -44,7 +52,8 @@ test('Complete Data Flow: Doctor triage -> Photo -> Questionnaire -> Submit -> A
   });
   assert.equal(pRes.status, 201);
   const patient = (await pRes.json()).patient;
-  assert.equal(patient.name, 'Lakshmi Bai');
+  createdPatientId = patient.id;
+  assert.equal(patient.name, 'Test Patient Beta');
   assert.equal(patient.patient_code, testPatientCode);
 
   // 3. Capture & Upload Face Photo (base64 image from camera)
@@ -127,7 +136,7 @@ test('Complete Data Flow: Doctor triage -> Photo -> Questionnaire -> Submit -> A
   const adminToken = 'mock:ADMIN:uid_admin_auditor:auditor@hospital.com:Chief Admin';
   const adminHeaders = { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' };
 
-  // Admin sees all patients, including Lakshmi Bai with her photo
+  // Admin sees all patients, including Test Patient Beta with her photo
   const adminPatientsRes = await fetch(`${baseUrl}/admin/patients`, { headers: adminHeaders });
   assert.equal(adminPatientsRes.status, 200);
   const adminPatients = (await adminPatientsRes.json()).patients;
