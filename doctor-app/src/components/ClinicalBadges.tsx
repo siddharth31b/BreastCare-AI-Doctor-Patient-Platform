@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { ClinicalTheme, RADIUS, SPACING, getRiskColors, getStatusColors } from '../theme/clinicalTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -7,9 +7,10 @@ export interface RiskBadgeProps {
   tier?: 'Low' | 'Moderate' | 'High' | 'Urgent' | string;
   label?: string;
   size?: 'sm' | 'md' | 'lg';
+  style?: StyleProp<ViewStyle>;
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ tier, label, size = 'md' }) => {
+export const RiskBadge: React.FC<RiskBadgeProps> = React.memo(({ tier, label, size = 'md', style }) => {
   const { t, language } = useLanguage();
   const isHindi = language === 'hi';
   const c = getRiskColors(tier);
@@ -36,7 +37,9 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ tier, label, size = 'md' }
         styles.badge,
         { backgroundColor: c.bg, borderColor: c.border },
         size === 'sm' && styles.badgeSm,
+        size === 'md' && styles.badgeMd,
         size === 'lg' && styles.badgeLg,
+        style,
       ]}
       accessibilityRole="text"
       accessibilityLabel={`Risk tier: ${displayLabel}`}
@@ -50,12 +53,14 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ tier, label, size = 'md' }
           size === 'lg' && styles.textLg,
           isHindi && styles.textHindi,
         ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
       >
         {displayLabel}
       </Text>
     </View>
   );
-};
+});
 
 export interface StatusBadgeProps {
   status:
@@ -66,9 +71,11 @@ export interface StatusBadgeProps {
     | 'REASSESSMENT_REQUESTED'
     | string;
   customLabel?: string;
+  size?: 'sm' | 'md' | 'lg';
+  style?: StyleProp<ViewStyle>;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, customLabel }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = React.memo(({ status, customLabel, size = 'md', style }) => {
   const { t, language } = useLanguage();
   const isHindi = language === 'hi';
   const p = getStatusColors(status);
@@ -89,16 +96,33 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, customLabel })
 
   return (
     <View
-      style={[styles.statusBadge, { backgroundColor: p.bg, borderColor: p.border }]}
+      style={[
+        styles.statusBadge,
+        { backgroundColor: p.bg, borderColor: p.border },
+        size === 'sm' && styles.statusBadgeSm,
+        size === 'md' && styles.statusBadgeMd,
+        size === 'lg' && styles.statusBadgeLg,
+        style,
+      ]}
       accessibilityRole="text"
       accessibilityLabel={`Status: ${finalLabel}`}
     >
-      <Text style={[styles.statusText, { color: p.text }, isHindi && styles.statusTextHindi]}>
+      <Text
+        style={[
+          styles.statusText,
+          { color: p.text },
+          size === 'sm' && styles.statusTextSm,
+          size === 'lg' && styles.statusTextLg,
+          isHindi && styles.statusTextHindi,
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {finalLabel}
       </Text>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   badge: {
@@ -112,9 +136,22 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeSm: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    width: 124,
+    height: 26,
+    paddingHorizontal: 6,
+    paddingVertical: 0,
     borderRadius: RADIUS.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeMd: {
+    width: 150,
+    height: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    borderRadius: RADIUS.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeLg: {
     paddingHorizontal: 14,
@@ -122,9 +159,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   text: {
     fontSize: 12,
@@ -133,8 +170,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   textSm: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10.5,
+    lineHeight: 14,
+    letterSpacing: 0.1,
   },
   textLg: {
     fontSize: 14,
@@ -145,16 +183,52 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     alignSelf: 'flex-start',
   },
+  statusBadgeSm: {
+    width: 124,
+    height: 26,
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+    borderRadius: RADIUS.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusBadgeMd: {
+    width: 150,
+    height: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    borderRadius: RADIUS.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusBadgeLg: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: RADIUS.md,
+  },
   statusText: {
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
+  },
+  statusTextSm: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    letterSpacing: 0.1,
+  },
+  statusTextLg: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '800',
   },
   statusTextHindi: {
     lineHeight: 18,

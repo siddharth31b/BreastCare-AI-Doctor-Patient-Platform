@@ -7,7 +7,6 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  useWindowDimensions,
   Platform,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -332,6 +331,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       {/* 2. MAIN SCROLL CANVAS                                        */}
       {/* ============================================================ */}
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
           isLandscape && styles.scrollContentLandscape,
@@ -349,6 +349,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           {/* 3. FOUR INTERACTIVE MEDICAL KPI CARDS                        */}
           {/* ============================================================ */}
           <View
+            key={isLandscape ? 'kpi-landscape' : 'kpi-portrait'}
             style={[
               styles.kpiContainer,
               isLandscape ? styles.kpiContainerLandscape : styles.kpiContainerPortrait,
@@ -418,18 +419,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           {/* ============================================================ */}
-          {/* 4. RESPONSIVE TWO-COLUMN WORKSTATION LAYOUT                  */}
+          {/* 4. CLINICAL WORKSTATION CONTENT                              */}
           {/* ============================================================ */}
-          <View style={isLandscape ? styles.twoColumnRow : styles.singleColumn}>
-            {/* ------------------------------------------------------------ */}
-            {/* LEFT / PRIMARY AREA (~65%)                                   */}
-            {/* ------------------------------------------------------------ */}
-            <View
-              style={[
-                styles.leftColumn,
-                isLandscape ? styles.leftColumnLandscape : styles.fullWidth,
-              ]}
-            >
+          <View style={styles.mainContentArea}>
               {/* Context Banner */}
               <View style={styles.contextBanner}>
                 <View style={styles.contextDot} />
@@ -503,147 +495,153 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   />
                 ) : isLandscape ? (
                   /* Tablet Landscape Clinical Table (7 Columns) */
-                  <View style={styles.table}>
-                    <View style={styles.tableHead}>
-                      <Text style={[styles.th, { flex: 2.1 }]}>
-                        {isHindi ? 'मरीज़' : 'PATIENT'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.1 }]}>
-                        {isHindi ? 'आईडी / कोड' : 'ID / CODE'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.0 }]}>
-                        {isHindi ? 'आयु / लिंग' : 'AGE / GENDER'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.2 }]}>
-                        {isHindi ? 'त्रिएज जोखिम' : 'TRIAGE RISK'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.2 }]}>
-                        {isHindi ? 'स्थिति' : 'STATUS'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.2 }]}>
-                        {isHindi ? 'दिनांक / समय' : 'DATE / TIME'}
-                      </Text>
-                      <Text style={[styles.th, { flex: 1.2, textAlign: 'right' }]}>
-                        {isHindi ? 'कार्रवाई' : 'ACTION'}
-                      </Text>
-                    </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.tableScrollContent}
+                  >
+                    <View style={styles.table}>
+                      <View style={styles.tableHead}>
+                        <Text style={[styles.th, styles.thPatient]}>
+                          {isHindi ? 'मरीज़' : 'PATIENT'}
+                        </Text>
+                        <Text style={[styles.th, styles.thCode]}>
+                          {isHindi ? 'आईडी / कोड' : 'ID / CODE'}
+                        </Text>
+                        <Text style={[styles.th, styles.thDemo]}>
+                          {isHindi ? 'आयु / लिंग' : 'AGE / GENDER'}
+                        </Text>
+                        <Text style={[styles.th, styles.thRisk]}>
+                          {isHindi ? 'त्रिएज जोखिम' : 'TRIAGE RISK'}
+                        </Text>
+                        <Text style={[styles.th, styles.thStatus]}>
+                          {isHindi ? 'स्थिति' : 'STATUS'}
+                        </Text>
+                        <Text style={[styles.th, styles.thDate]}>
+                          {isHindi ? 'दिनांक / समय' : 'DATE / TIME'}
+                        </Text>
+                        <Text style={[styles.th, styles.thAction]}>
+                          {isHindi ? 'कार्रवाई' : 'ACTION'}
+                        </Text>
+                      </View>
 
-                    {patients.map((p, idx) => {
-                      const latestAssessment = latestAssessmentByPatient.get(p.id);
-                      const displayName = getPatientDisplayName(p);
-                      const patientCode = getPatientCodeDisplay(p);
-                      const initial = displayName.charAt(0).toUpperCase();
-                      const lastTime = formatRelativeTime(
-                        latestAssessment?.completed_at || latestAssessment?.started_at || p.created_at,
-                        language
-                      );
-                      const formattedDate = formatClinicalDateTime(
-                        latestAssessment?.completed_at || latestAssessment?.started_at || p.created_at,
-                        language
-                      );
-                      const isLast = idx === patients.length - 1;
+                      {patients.map((p, idx) => {
+                        const latestAssessment = latestAssessmentByPatient.get(p.id);
+                        const displayName = getPatientDisplayName(p);
+                        const patientCode = getPatientCodeDisplay(p);
+                        const initial = displayName.charAt(0).toUpperCase();
+                        const lastTime = formatRelativeTime(
+                          latestAssessment?.completed_at || latestAssessment?.started_at || p.created_at,
+                          language
+                        );
+                        const formattedDate = formatClinicalDateTime(
+                          latestAssessment?.completed_at || latestAssessment?.started_at || p.created_at,
+                          language
+                        );
+                        const isLast = idx === patients.length - 1;
 
-                      return (
-                        <View
-                          key={p.id}
-                          style={[styles.tableRow, isLast && styles.tableRowLast]}
-                        >
-                          {/* 1. Patient Name & Avatar */}
-                          <TouchableOpacity
-                            style={[styles.td, styles.tdPatient, { flex: 2.1 }]}
-                            onPress={() => navigation.navigate('PatientDetail', { patientId: p.id })}
-                            activeOpacity={0.7}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${displayName}, ${t('patientMedicalRecord')}`}
+                        return (
+                          <View
+                            key={p.id}
+                            style={[styles.tableRow, isLast && styles.tableRowLast]}
                           >
-                            <View style={styles.rowAvatar}>
-                              <Text style={styles.rowAvatarText}>{initial}</Text>
-                            </View>
-                            <View style={styles.rowNameCol}>
-                              <Text style={styles.rowName} numberOfLines={1}>
-                                {displayName}
-                              </Text>
-                              <Text style={styles.rowTime}>{lastTime}</Text>
-                            </View>
-                          </TouchableOpacity>
-
-                          {/* 2. Patient Code */}
-                          <View style={[styles.td, { flex: 1.1 }]}>
-                            <View style={styles.codeTag}>
-                              <Text style={styles.codeTagText}>{patientCode}</Text>
-                            </View>
-                          </View>
-
-                          {/* 3. Age & Gender */}
-                          <View style={[styles.td, { flex: 1.0 }]}>
-                            <Text style={styles.demoText}>
-                              {p.age} {t('years')}
-                            </Text>
-                            <Text style={styles.demoSubText}>{formatGender(p.gender)}</Text>
-                          </View>
-
-                          {/* 4. Risk Tier */}
-                          <View style={[styles.td, { flex: 1.2 }]}>
-                            {latestAssessment?.risk_analysis?.tier ? (
-                              <RiskBadge tier={latestAssessment.risk_analysis.tier} size="sm" />
-                            ) : (
-                              <View style={styles.noBadge}>
-                                <Text style={styles.noBadgeText}>{t('pendingIntake')}</Text>
+                            {/* 1. Patient Name & Avatar */}
+                            <TouchableOpacity
+                              style={[styles.td, styles.tdPatient, styles.colPatient]}
+                              onPress={() => navigation.navigate('PatientDetail', { patientId: p.id })}
+                              activeOpacity={0.7}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${displayName}, ${t('patientMedicalRecord')}`}
+                            >
+                              <View style={styles.rowAvatar}>
+                                <Text style={styles.rowAvatarText}>{initial}</Text>
                               </View>
-                            )}
-                          </View>
+                              <View style={styles.rowNameCol}>
+                                <Text style={styles.rowName} numberOfLines={1}>
+                                  {displayName}
+                                </Text>
+                                <Text style={styles.rowTime}>{lastTime}</Text>
+                              </View>
+                            </TouchableOpacity>
 
-                          {/* 5. Status */}
-                          <View style={[styles.td, { flex: 1.2 }]}>
-                            {latestAssessment?.status ? (
-                              <StatusBadge status={latestAssessment.status} />
-                            ) : (
-                              <Text style={styles.noDataText}>—</Text>
-                            )}
-                          </View>
+                            {/* 2. Patient Code */}
+                            <View style={[styles.td, styles.colCode]}>
+                              <View style={styles.codeTag}>
+                                <Text style={styles.codeTagText}>{patientCode}</Text>
+                              </View>
+                            </View>
 
-                          {/* 6. Date / Time */}
-                          <View style={[styles.td, { flex: 1.2 }]}>
-                            <Text style={styles.dateTimeText}>{formattedDate}</Text>
-                          </View>
+                            {/* 3. Age & Gender */}
+                            <View style={[styles.td, styles.colDemo]}>
+                              <Text style={styles.demoText}>
+                                {p.age} {t('years')}
+                              </Text>
+                              <Text style={styles.demoSubText}>{formatGender(p.gender)}</Text>
+                            </View>
 
-                          {/* 7. Action Button */}
-                          <View style={[styles.td, { flex: 1.2, alignItems: 'flex-end' }]}>
-                            {latestAssessment ? (
-                              <TouchableOpacity
-                                style={styles.rowActionBtn}
-                                onPress={() =>
-                                  navigation.navigate('PhysicianReview', {
-                                    assessmentId: latestAssessment.id,
-                                    patient: p,
-                                  })
-                                }
-                                activeOpacity={0.8}
-                                hitSlop={ACCESSIBILITY.hitSlop}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${t('review')}: ${displayName} (${patientCode})`}
-                              >
-                                <Text style={styles.rowActionBtnText}>{t('review')}</Text>
-                              </TouchableOpacity>
-                            ) : (
-                              <TouchableOpacity
-                                style={styles.rowStartBtn}
-                                onPress={() =>
-                                  navigation.navigate('AssessmentStart', { patient: p })
-                                }
-                                activeOpacity={0.8}
-                                hitSlop={ACCESSIBILITY.hitSlop}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${t('startAssessment')}: ${displayName} (${patientCode})`}
-                              >
-                                <Text style={styles.rowStartBtnText}>{t('startAssessment')}</Text>
-                              </TouchableOpacity>
-                            )}
+                            {/* 4. Risk Tier */}
+                            <View style={[styles.td, styles.colRisk]}>
+                              {latestAssessment?.risk_analysis?.tier ? (
+                                <RiskBadge tier={latestAssessment.risk_analysis.tier} size="sm" />
+                              ) : (
+                                <View style={styles.noBadge}>
+                                  <Text style={styles.noBadgeText}>{t('pendingIntake')}</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* 5. Status */}
+                            <View style={[styles.td, styles.colStatus]}>
+                              {latestAssessment?.status ? (
+                                <StatusBadge status={latestAssessment.status} size="sm" />
+                              ) : (
+                                <Text style={styles.noDataText}>—</Text>
+                              )}
+                            </View>
+
+                            {/* 6. Date / Time */}
+                            <View style={[styles.td, styles.colDate]}>
+                              <Text style={styles.dateTimeText} numberOfLines={1}>{formattedDate}</Text>
+                            </View>
+
+                            {/* 7. Action Button */}
+                            <View style={[styles.td, styles.colAction]}>
+                              {latestAssessment ? (
+                                <TouchableOpacity
+                                  style={styles.rowActionBtn}
+                                  onPress={() =>
+                                    navigation.navigate('PhysicianReview', {
+                                      assessmentId: latestAssessment.id,
+                                      patient: p,
+                                    })
+                                  }
+                                  activeOpacity={0.8}
+                                  hitSlop={ACCESSIBILITY.hitSlop}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${t('review')}: ${displayName} (${patientCode})`}
+                                >
+                                  <Text style={styles.rowActionBtnText}>{t('review')}</Text>
+                                </TouchableOpacity>
+                              ) : (
+                                <TouchableOpacity
+                                  style={styles.rowStartBtn}
+                                  onPress={() =>
+                                    navigation.navigate('AssessmentStart', { patient: p })
+                                  }
+                                  activeOpacity={0.8}
+                                  hitSlop={ACCESSIBILITY.hitSlop}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${t('startAssessment')}: ${displayName} (${patientCode})`}
+                                >
+                                  <Text style={styles.rowStartBtnText}>{t('startAssessment')}</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           </View>
-                        </View>
-                      );
-                    })}
-                  </View>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
                 ) : (
                   /* Portrait / Narrow View Patient Cards */
                   <View style={styles.cardGrid}>
@@ -733,170 +731,8 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 )}
               </View>
             </View>
-
-            {/* ------------------------------------------------------------ */}
-            {/* RIGHT / SECONDARY AREA (~35%)                                */}
-            {/* ------------------------------------------------------------ */}
-            <View
-              style={[
-                styles.rightColumn,
-                isLandscape ? styles.rightColumnLandscape : styles.fullWidth,
-              ]}
-            >
-              {/* Card 1: Doctor Station Profile */}
-              <View style={styles.sideCard}>
-                <View style={styles.sideCardHeadRow}>
-                  <Text style={styles.sideCardTitle}>
-                    {isHindi ? 'चिकित्सक एवं स्टेशन' : 'CLINICIAN & WORKSTATION'}
-                  </Text>
-                  <View style={styles.stationBadge}>
-                    <Text style={styles.stationBadgeText}>{TABLET_ID}</Text>
-                  </View>
-                </View>
-                <View style={styles.docProfile}>
-                  <View style={styles.docAvatar}>
-                    <Text style={styles.docAvatarText}>
-                      {user?.name ? user.name.charAt(0).toUpperCase() : 'D'}
-                    </Text>
-                  </View>
-                  <View style={styles.docMeta}>
-                    <Text style={styles.docName} numberOfLines={1}>
-                      {doctorName}
-                    </Text>
-                    <Text style={styles.docEmail} numberOfLines={1}>
-                      {user?.email || 'Authenticated Clinician'}
-                    </Text>
-                    <View style={styles.roleChip}>
-                      <Text style={styles.roleChipText}>
-                        {isHindi ? 'स्क्रीनिंग चिकित्सक' : 'Screening Physician'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>{isHindi ? 'स्टेशन आईडी:' : 'Terminal ID:'}</Text>
-                  <Text style={styles.metaVal}>{TABLET_ID}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>{isHindi ? 'प्रोटोकॉल:' : 'Protocol:'}</Text>
-                  <Text style={styles.metaVal}>Multi-Phase BRM v1.0</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>{isHindi ? 'प्रणाली मोड:' : 'Workstation Mode:'}</Text>
-                  <Text style={styles.metaVal}>Tablet Landscape Triage</Text>
-                </View>
-              </View>
-
-              {/* Card 2: Terminal Connectivity */}
-              <View style={styles.sideCard}>
-                <View style={styles.sideCardHeadRow}>
-                  <Text style={styles.sideCardTitle}>
-                    {isHindi ? 'स्टेशन कनेक्टिविटी' : 'TERMINAL CONNECTIVITY'}
-                  </Text>
-                  <View
-                    style={[
-                      styles.connDot,
-                      {
-                        backgroundColor: isLive
-                          ? ClinicalTheme.colors.statusLive
-                          : ClinicalTheme.colors.statusPending,
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>{isHindi ? 'रीयल-टाइम ब्रिज:' : 'Realtime Bridge:'}</Text>
-                  <Text
-                    style={[
-                      styles.metaVal,
-                      {
-                        color: isLive
-                          ? ClinicalTheme.colors.riskLow
-                          : ClinicalTheme.colors.statusPending,
-                      },
-                    ]}
-                  >
-                    {isLive
-                      ? isHindi ? 'सक्रिय (लाइव)' : 'Active (Live)'
-                      : isHindi ? 'कनेक्ट हो रहा है...' : 'Connecting...'}
-                  </Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>{isHindi ? 'अंतिम सिंक:' : 'Sync Status:'}</Text>
-                  <Text style={styles.metaVal} numberOfLines={1}>
-                    {localizedSyncStatus}
-                  </Text>
-                </View>
-                <View style={styles.secureNote}>
-                  <Text style={styles.secureNoteText}>
-                    🔒 {isHindi ? 'एन्क्रिप्टेड स्टेशन टनल • स्थानीय डेटा सुरक्षित' : 'Encrypted Station Tunnel • Local Cache Protected'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Card 3: Clinical Actions & Priority Queue */}
-              <View style={styles.sideCard}>
-                <Text style={styles.sideCardTitle}>
-                  {isHindi ? 'त्वरित नैदानिक कार्रवाइयां' : 'CLINICAL ACTIONS & QUEUE'}
-                </Text>
-
-                {stats.pendingReviews > 0 ? (
-                  <TouchableOpacity
-                    style={styles.alertBtn}
-                    onPress={() =>
-                      navigation.navigate('AssessmentHistory', { initialFilter: 'PENDING' })
-                    }
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Review ${stats.pendingReviews} pending assessments`}
-                  >
-                    <Text style={styles.alertBtnText}>
-                      ⚠️ {isHindi ? `समीक्षा करें (${stats.pendingReviews} लंबित)` : `Review ${stats.pendingReviews} Pending Assessments`} →
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                {stats.urgentOrHighRisk > 0 ? (
-                  <TouchableOpacity
-                    style={styles.urgentAlertBtn}
-                    onPress={() =>
-                      navigation.navigate('AssessmentHistory', { initialFilter: 'URGENT' })
-                    }
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Triage ${stats.urgentOrHighRisk} urgent or high risk cases`}
-                  >
-                    <Text style={styles.urgentAlertBtnText}>
-                      🚨 {isHindi ? `प्राथमिकता त्रिएज (${stats.urgentOrHighRisk} मामले)` : `Priority Triage (${stats.urgentOrHighRisk} High-Risk)`} →
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                <TouchableOpacity
-                  style={styles.primaryBtn}
-                  onPress={() => navigation.navigate('NewPatient')}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('startNewPatient')}
-                >
-                  <Text style={styles.primaryBtnText}>+ {t('startNewPatient')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => navigation.navigate('AssessmentHistory')}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('assessmentHistory')}
-                >
-                  <Text style={styles.secondaryBtnText}>📋 {t('assessmentHistory')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
     </View>
   );
 };
@@ -1050,10 +886,20 @@ const styles = StyleSheet.create({
   // -------------------------------------------------------------
   // MAIN SCROLL & CONTAINERS
   // -------------------------------------------------------------
-  scrollContent: { padding: SPACING.xl },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    padding: SPACING.xl,
+    flexGrow: 1,
+    width: '100%',
+  },
   scrollContentLandscape: {
     paddingHorizontal: SPACING.xxl,
     paddingVertical: SPACING.xl,
+    flexGrow: 1,
+    width: '100%',
   },
   contentContainer: {
     width: '100%',
@@ -1065,15 +911,19 @@ const styles = StyleSheet.create({
   // KPI METRICS SECTION
   // -------------------------------------------------------------
   kpiContainer: {
+    width: '100%',
     marginBottom: SPACING.xl,
   },
   kpiContainerLandscape: {
     flexDirection: 'row',
+    flexWrap: 'nowrap',
+    width: '100%',
     gap: SPACING.md,
   },
   kpiContainerPortrait: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    width: '100%',
     gap: SPACING.md,
   },
   kpiCard: {
@@ -1088,9 +938,12 @@ const styles = StyleSheet.create({
   },
   kpiCardLandscape: {
     flex: 1,
+    minWidth: 0,
+    width: 'auto',
   },
   kpiCardPortrait: {
     width: '48%',
+    flex: 0,
   },
   kpiTopRow: {
     flexDirection: 'row',
@@ -1156,19 +1009,12 @@ const styles = StyleSheet.create({
   },
 
   // -------------------------------------------------------------
-  // TWO-COLUMN RESPONSIVE LAYOUT
+  // MAIN CLINICAL WORKSTATION AREA
   // -------------------------------------------------------------
-  twoColumnRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  mainContentArea: {
+    width: '100%',
     gap: SPACING.xl,
   },
-  singleColumn: { flexDirection: 'column', gap: SPACING.xl },
-  leftColumn: { flex: 1, gap: SPACING.xl },
-  leftColumnLandscape: { flex: 0.65 },
-  rightColumn: { flex: 1 },
-  rightColumnLandscape: { flex: 0.35 },
-  fullWidth: { width: '100%' },
 
   // -------------------------------------------------------------
   // CONTEXT BANNER
@@ -1316,7 +1162,8 @@ const styles = StyleSheet.create({
   // -------------------------------------------------------------
   // CLINICAL TABLE (7 COLUMNS)
   // -------------------------------------------------------------
-  table: { width: '100%' },
+  tableScrollContent: { minWidth: '100%' },
+  table: { minWidth: '100%' },
   tableHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1333,6 +1180,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
+  thPatient: { flex: 1.8, minWidth: 120 },
+  colPatient: { flex: 1.8, minWidth: 120 },
+
+  thCode: { flex: 0.9, minWidth: 72 },
+  colCode: { flex: 0.9, minWidth: 72 },
+
+  thDemo: { flex: 0.8, minWidth: 65 },
+  colDemo: { flex: 0.8, minWidth: 65 },
+
+  thRisk: { flex: 1.5, minWidth: 135 },
+  colRisk: { flex: 1.5, minWidth: 135 },
+
+  thStatus: { flex: 1.5, minWidth: 135 },
+  colStatus: { flex: 1.5, minWidth: 135 },
+
+  thDate: { flex: 1.1, minWidth: 90 },
+  colDate: { flex: 1.1, minWidth: 90 },
+
+  thAction: { flex: 0.9, minWidth: 70, textAlign: 'right' },
+  colAction: { flex: 0.9, minWidth: 70, alignItems: 'flex-end' },
+
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1343,7 +1211,10 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   tableRowLast: { borderBottomWidth: 0 },
-  td: { justifyContent: 'center' },
+  td: {
+    justifyContent: 'center',
+    paddingRight: SPACING.sm,
+  },
   tdPatient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1400,9 +1271,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   noBadge: {
-    alignSelf: 'flex-start',
+    width: 124,
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 7,
-    paddingVertical: 2,
     borderRadius: RADIUS.xs,
     backgroundColor: ClinicalTheme.colors.surfaceMuted,
     borderWidth: 1,
@@ -1545,180 +1418,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // -------------------------------------------------------------
-  // SIDEBAR (RIGHT COLUMN)
-  // -------------------------------------------------------------
-  sideCard: {
-    backgroundColor: ClinicalTheme.colors.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.border,
-    marginBottom: SPACING.lg,
-    ...ClinicalTheme.shadows.card,
-  },
-  sideCardTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.textSecondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  sideCardHeadRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  stationBadge: {
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.xs,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.borderMedium,
-  },
-  stationBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textSecondary,
-  },
-  docProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  docAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: ClinicalTheme.colors.primarySoft,
-    borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.primaryAccent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  docAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.primaryAccent,
-  },
-  docMeta: { flex: 1 },
-  docName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.textPrimary,
-  },
-  docEmail: {
-    fontSize: 11,
-    color: ClinicalTheme.colors.textMuted,
-    marginTop: 1,
-  },
-  roleChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: RADIUS.xs,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.borderMedium,
-  },
-  roleChipText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textSecondary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: ClinicalTheme.colors.borderSubtle,
-    marginVertical: SPACING.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  metaLabel: { fontSize: 11, color: ClinicalTheme.colors.textMuted },
-  metaVal: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textPrimary,
-    maxWidth: '55%',
-    textAlign: 'right',
-  },
-  connDot: { width: 8, height: 8, borderRadius: 4 },
-  secureNote: {
-    backgroundColor: ClinicalTheme.colors.surfaceMuted,
-    padding: SPACING.sm + 2,
-    borderRadius: RADIUS.xs,
-    marginTop: SPACING.md,
-  },
-  secureNoteText: {
-    fontSize: 10.5,
-    color: ClinicalTheme.colors.textMuted,
-    fontWeight: '600',
-  },
-  alertBtn: {
-    backgroundColor: ClinicalTheme.colors.riskModerateBg,
-    borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.riskModerateBorder,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    minHeight: TOUCH_TARGETS.min,
-    justifyContent: 'center',
-  },
-  alertBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.riskModerate,
-  },
-  urgentAlertBtn: {
-    backgroundColor: ClinicalTheme.colors.riskUrgentBg,
-    borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.riskUrgentBorder,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    minHeight: TOUCH_TARGETS.min,
-    justifyContent: 'center',
-  },
-  urgentAlertBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.riskUrgent,
-  },
-  primaryBtn: {
-    backgroundColor: ClinicalTheme.colors.primary,
-    minHeight: TOUCH_TARGETS.min,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  primaryBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textWhite,
-  },
-  secondaryBtn: {
-    backgroundColor: ClinicalTheme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.borderMedium,
-    minHeight: TOUCH_TARGETS.min,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-  },
-  secondaryBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textSecondary,
-  },
 });
+

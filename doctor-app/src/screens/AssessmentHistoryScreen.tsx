@@ -7,7 +7,6 @@ import {
   ScrollView,
   RefreshControl,
   TextInput,
-  useWindowDimensions,
 } from 'react-native';
 import { ApiService } from '../services/api.service';
 import { Assessment, getPatientDisplayName, getPatientCodeDisplay } from '../types';
@@ -163,75 +162,14 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
     [assessments]
   );
 
-  const filterTabs = [
+  const filterTabs = useMemo(() => [
     { key: 'ALL', label: t('allRecords'), count: assessments.length },
     { key: 'PENDING', label: t('pendingReview'), count: pendingCount },
     { key: 'VALIDATED', label: t('validated'), count: validatedCount },
     { key: 'REASSESSMENT', label: t('statusReassessmentRequested'), count: reassessmentCount },
     { key: 'URGENT', label: t('priorityClinicalTriage'), count: urgentCount },
-  ];
+  ], [assessments.length, pendingCount, validatedCount, reassessmentCount, urgentCount, t]);
 
-  const renderQueueSummary = (isPortraitMode = false) => (
-    <View style={[styles.queueStatsCard, isPortraitMode && styles.queueStatsCardPortrait]}>
-      <View style={styles.queueStatsHeader}>
-        <Text style={[styles.queueStatsTitle, isHindi && styles.headingHindi]}>
-          {t('reviewStatus')}
-        </Text>
-        <View style={styles.liveIndicatorPill}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>{t('statusLive')}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.queueCardsList, isPortraitMode && styles.queueCardsListPortrait]}>
-        {filterTabs.map(tab => {
-          const isTabActive = activeFilter === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.queueMetricCard,
-                isPortraitMode && styles.queueMetricCardPortraitItem,
-                isTabActive && styles.queueMetricCardActive,
-              ]}
-              onPress={() => setActiveFilter(tab.key as any)}
-              activeOpacity={INTERACTION.pressOpacity}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isTabActive }}
-              accessibilityLabel={`${tab.label}: ${tab.count}`}
-            >
-              <View style={styles.queueMetricRow}>
-                <Text
-                  style={[
-                    styles.queueMetricLabel,
-                    isTabActive && styles.queueMetricLabelActive,
-                    isHindi && styles.labelHindi,
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-                <View
-                  style={[
-                    styles.queueMetricCountPill,
-                    isTabActive && styles.queueMetricCountPillActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.queueMetricCountText,
-                      isTabActive && styles.queueMetricCountTextActive,
-                    ]}
-                  >
-                    {tab.count}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -304,6 +242,7 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
       </View>
 
       <ScrollView
+        style={{ flex: 1, width: '100%' }}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
@@ -313,10 +252,8 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
           />
         }
       >
-        <View style={[styles.contentWrap, isLandscape && styles.contentWrapLandscape]}>
-          {/* Main Records Area (Left ~75% in landscape) */}
-          <View style={isLandscape ? styles.mainColumn : styles.fullWidthColumn}>
-            {!isLandscape && renderQueueSummary(true)}
+        <View style={styles.contentWrap}>
+          <View style={styles.fullWidthColumn}>
             {loading ? (
               <LoadingState message={t('loadingRecords')} />
             ) : displayedAssessments.length === 0 ? (
@@ -405,7 +342,7 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
                       </View>
 
                       <View style={[styles.tdCell, styles.thStatus]}>
-                        <StatusBadge status={item.status} />
+                        <StatusBadge status={item.status} size="sm" />
                       </View>
 
                       <View style={[styles.tdCell, styles.thDate]}>
@@ -495,8 +432,8 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
                         accessibilityRole="button"
                         accessibilityLabel={`${t('reviewFile')}: ${displayName}`}
                       >
-                        <RiskBadge tier={tier} size="md" />
-                        <StatusBadge status={item.status} />
+                        <RiskBadge tier={tier} size="md" style={styles.cardBadgeItem} />
+                        <StatusBadge status={item.status} size="md" style={styles.cardBadgeItem} />
                         <Text style={[styles.viewLinkText, isHindi && styles.labelHindi]}>
                           {t('reviewFile')} →
                         </Text>
@@ -507,13 +444,6 @@ export const AssessmentHistoryScreen: React.FC<Props> = ({ navigation, route }) 
               </View>
             )}
           </View>
-
-          {/* Quick Filter Queue Stats (Right ~25% in landscape) */}
-          {isLandscape && (
-            <View style={styles.sideColumn}>
-              {renderQueueSummary(false)}
-            </View>
-          )}
         </View>
       </ScrollView>
     </View>
@@ -602,19 +532,6 @@ const styles = StyleSheet.create({
     maxWidth: 1280,
     alignSelf: 'center',
   },
-  contentWrapLandscape: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.xl,
-  },
-  mainColumn: {
-    flex: 0.68,
-    minWidth: 0,
-  },
-  sideColumn: {
-    flex: 0.32,
-    gap: SPACING.lg,
-  },
   fullWidthColumn: {
     width: '100%',
   },
@@ -654,16 +571,20 @@ const styles = StyleSheet.create({
     flex: 0.9,
   },
   thRisk: {
-    flex: 1.1,
+    flex: 1.4,
+    minWidth: 135,
   },
   thStatus: {
-    flex: 1.1,
+    flex: 1.4,
+    minWidth: 135,
   },
   thDate: {
     flex: 1.25,
+    minWidth: 90,
   },
   thAction: {
-    flex: 1.25,
+    flex: 1.1,
+    minWidth: 75,
     textAlign: 'right',
     alignItems: 'flex-end',
   },
@@ -682,6 +603,7 @@ const styles = StyleSheet.create({
   },
   tdCell: {
     justifyContent: 'center',
+    paddingRight: 6,
   },
   patientTdCol: {
     flexDirection: 'row',
@@ -827,125 +749,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   recordRightCol: {
-    alignItems: 'flex-end',
+    width: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+  },
+  cardBadgeItem: {
+    width: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   viewLinkText: {
     color: ClinicalTheme.colors.primaryAccent,
     fontSize: 12,
     fontWeight: '700',
-    marginTop: 4,
+    marginTop: 2,
+    width: 150,
+    textAlign: 'center',
   },
-  queueStatsCard: {
-    backgroundColor: ClinicalTheme.colors.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.borderDefault,
-    ...ClinicalTheme.shadows.card,
-  },
-  queueStatsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    paddingBottom: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: ClinicalTheme.colors.borderDefault,
-  },
-  queueStatsTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.textPrimary,
-    letterSpacing: 0.3,
-  },
-  liveIndicatorPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: ClinicalTheme.colors.riskLowBg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.riskLowBorder,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: ClinicalTheme.colors.riskLow,
-  },
-  liveText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.riskLow,
-  },
-  queueCardsList: {
-    gap: SPACING.sm,
-  },
-  queueStatsCardPortrait: {
-    marginBottom: SPACING.lg,
-    width: '100%',
-  },
-  queueCardsListPortrait: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  queueMetricCardPortraitItem: {
-    flexBasis: '48%',
-    flexGrow: 1,
-  },
-  queueMetricCard: {
-    backgroundColor: ClinicalTheme.colors.bgMuted,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: ClinicalTheme.colors.borderDefault,
-    minHeight: TOUCH_TARGETS.minTouchTarget,
-    justifyContent: 'center',
-  },
-  queueMetricCardActive: {
-    backgroundColor: ClinicalTheme.colors.primarySoft,
-    borderColor: ClinicalTheme.colors.primaryAccent,
-  },
-  queueMetricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  queueMetricLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: ClinicalTheme.colors.textSecondary,
-  },
-  queueMetricLabelActive: {
-    color: ClinicalTheme.colors.primaryLight,
-  },
-  queueMetricCountPill: {
-    backgroundColor: ClinicalTheme.colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.xs,
-    borderWidth: 1,
-    borderColor: ClinicalTheme.colors.borderMedium,
-    minWidth: 28,
-    alignItems: 'center',
-  },
-  queueMetricCountPillActive: {
-    backgroundColor: ClinicalTheme.colors.primary,
-    borderColor: ClinicalTheme.colors.primary,
-  },
-  queueMetricCountText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: ClinicalTheme.colors.textPrimary,
-  },
-  queueMetricCountTextActive: {
-    color: ClinicalTheme.colors.textWhite,
-  },
+
   tabTextHindi: {
     lineHeight: 18,
   },
